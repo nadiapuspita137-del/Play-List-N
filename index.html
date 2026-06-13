@@ -4,13 +4,12 @@
     <meta charset="UTF-8">
     <link rel="icon" href="favi.jpg" type="image/jpg">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>Play List Ngawi | Y2K Player</title>
-    <!-- Fonts -->
+    <title>Play List Ngawi | Music Player</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;14..32,400;14..32,500;14..32,600;14..32,700;14..32,800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        /* ===== GAYA SAMA SEPERTI SEBELUMNYA ===== */
+        /* ===== GAYA SAMA (tidak diubah) ===== */
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { font-family: 'Inter', sans-serif; background: #0a0a0a; overflow-x: hidden; transition: background 0.3s, color 0.2s; }
         body.light { background: #f0f0f0; }
@@ -236,7 +235,7 @@
             return songs;
         }
 
-        // HAPUS PLAYLIST (dengan proteksi permanent)
+        // Hapus playlist (dengan proteksi permanent)
         function deletePlaylist(playlistId) {
             const playlist = playlists.find(p => p.id === playlistId);
             if (!playlist) return;
@@ -272,13 +271,12 @@
             }
         }
 
-        // Render tabs playlist (tanpa ikon hapus untuk playlist permanent)
+        // Render tabs playlist (tanpa tombol hapus untuk permanent)
         function renderPlaylistTabs() {
             playlistTabsContainer.innerHTML = '';
             playlists.forEach(pl => {
                 const tab = document.createElement('div');
                 tab.className = `playlist-tab text-sm ${currentPlaylistId === pl.id ? 'active' : ''}`;
-                // Jika permanent, tidak tampilkan icon hapus
                 if (pl.permanent) {
                     tab.innerHTML = `<span>${pl.name}</span>`;
                 } else {
@@ -405,7 +403,19 @@
             audio.onloadedmetadata = () => {
                 durationSpan.textContent = formatTime(audio.duration);
                 hideLoading();
-                if (wasPlaying) audio.play().then(() => { isPlaying=true; updatePlayButtonUI(true); }).catch(e=>console.log);
+                if (wasPlaying) {
+                    audio.play().then(() => {
+                        isPlaying = true;
+                        updatePlayButtonUI(true);
+                    }).catch(err => {
+                        console.log("Auto play error:", err);
+                        isPlaying = false;
+                        updatePlayButtonUI(false);
+                    });
+                } else {
+                    // jika tidak sedang play, pastikan UI sesuai
+                    updatePlayButtonUI(false);
+                }
             };
             audio.onerror = () => { hideLoading(); alert(`Gagal memuat ${song.title}`); };
             renderPlaylistTabs();
@@ -430,7 +440,10 @@
                 isPlaying = false;
                 updatePlayButtonUI(false);
             } else {
-                audio.play().then(() => { isPlaying = true; updatePlayButtonUI(true); }).catch(()=>alert('Klik halaman dulu'));
+                audio.play().then(() => {
+                    isPlaying = true;
+                    updatePlayButtonUI(true);
+                }).catch(() => alert('Klik halaman dulu untuk memutar'));
             }
             refreshPlaylistView();
         }
@@ -447,7 +460,7 @@
             currentSongIndexInFiltered = newIndex;
             currentPlayingSongId = songs[newIndex].id;
             loadSongById(currentPlayingSongId);
-            if (isPlaying) audio.play().catch(e=>console.log);
+            // loadSongById akan menjalankan audio.play() jika wasPlaying true
         }
 
         function prevSong() {
@@ -458,7 +471,6 @@
             currentSongIndexInFiltered = newIndex;
             currentPlayingSongId = songs[newIndex].id;
             loadSongById(currentPlayingSongId);
-            if (isPlaying) audio.play().catch(e=>console.log);
         }
 
         function updateProgress() {
@@ -477,10 +489,8 @@
             const saved = localStorage.getItem('y2k_playlists');
             if (saved) {
                 playlists = JSON.parse(saved);
-                // Pastikan playlist default memiliki flag permanent (jika ada playlist dengan nama "Playlist Utama" atau id tertentu)
                 const defaultPlaylist = playlists.find(p => p.name === "Playlist Utama" || p.id === 1);
                 if (defaultPlaylist) defaultPlaylist.permanent = true;
-                // Untuk playlist lain, pastikan tidak ada flag permanent
                 playlists.forEach(p => { if (p.name !== "Playlist Utama" && p.id !== 1) p.permanent = false; });
             } else {
                 const defaultId = Date.now();
@@ -551,10 +561,18 @@
             }
         });
         audio.addEventListener('timeupdate', updateProgress);
+        
+        // ========== PERBAIKAN AUTO PLAY NEXT ==========
         audio.addEventListener('ended', () => {
-            if (isRepeat) { audio.currentTime=0; audio.play(); }
-            else nextSong();
+            if (isRepeat) {
+                audio.currentTime = 0;
+                audio.play().catch(e => console.log("Repeat play error:", e));
+            } else {
+                // panggil nextSong untuk lanjut ke lagu berikutnya
+                nextSong();
+            }
         });
+        
         audio.addEventListener('play', () => { isPlaying=true; updatePlayButtonUI(true); refreshPlaylistView(); });
         audio.addEventListener('pause', () => { isPlaying=false; updatePlayButtonUI(false); refreshPlaylistView(); });
         searchInput.addEventListener('input', () => { refreshPlaylistView(); });
@@ -594,6 +612,7 @@
             loadSongById(currentPlayingSongId);
         }
         audio.volume = 0.7;
+        // Auto-play hint
         document.body.addEventListener('click', function initOnce() {
             if (!isPlaying && audio.src) togglePlay();
             document.body.removeEventListener('click', initOnce);
