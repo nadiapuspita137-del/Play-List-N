@@ -1,16 +1,20 @@
-
 <!DOCTYPE html>
 <html lang="id">
 <head>
     <meta charset="UTF-8">
-   <!-- favicontol -->
-  <link rel="icon" href="favi.jpg" type="image/jpg">
+    <!-- favicon -->
+    <link rel="icon" href="favi.jpg" type="image/jpg">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
     <title>Play List Ngawi | Music Player</title>
+    
+    <!-- Font Google Inter -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;14..32,400;14..32,500;14..32,600;14..32,700;14..32,800&display=swap" rel="stylesheet">
+    <!-- Font Awesome 6 (icon) -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Tailwind CSS (framework CSS cepat) -->
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
+        /* ========== STYLE GLOBAL ========== */
         * {
             margin: 0;
             padding: 0;
@@ -19,62 +23,14 @@
 
         body {
             font-family: 'Inter', sans-serif;
-            background: #0a0a0a;
+            background: #0a0a0a; /* background hitam */
             overflow-x: hidden;
         }
 
-        /* Custom Tailwind Config */
-        tailwind.config = {
-            theme: {
-                extend: {
-                    animation: {
-                        'glow-pulse': 'glowPulse 2s ease-in-out infinite',
-                        'fade-in': 'fadeIn 0.5s cubic-bezier(0.4, 0, 0.2, 1)',
-                        'fade-out': 'fadeOut 0.3s ease-out',
-                        'scale-up': 'scaleUp 0.4s cubic-bezier(0.34, 1.56, 0.64, 1)',
-                        'spin-slow': 'spin 3s linear infinite',
-                        'ripple': 'ripple 0.6s ease-out',
-                        'float': 'float 6s ease-in-out infinite',
-                        'splash': 'splash 0.8s ease-out'
-                    },
-                    keyframes: {
-                        glowPulse: {
-                            '0%, 100%': { boxShadow: '0 0 5px #00ff88, 0 0 10px #00ff88' },
-                            '50%': { boxShadow: '0 0 15px #00ff88, 0 0 25px #00ff88' }
-                        },
-                        fadeIn: {
-                            '0%': { opacity: '0', transform: 'translateY(10px)' },
-                            '100%': { opacity: '1', transform: 'translateY(0)' }
-                        },
-                        fadeOut: {
-                            '0%': { opacity: '1', transform: 'translateY(0)' },
-                            '100%': { opacity: '0', transform: 'translateY(-10px)' }
-                        },
-                        scaleUp: {
-                            '0%': { transform: 'scale(0.95)', opacity: '0' },
-                            '100%': { transform: 'scale(1)', opacity: '1' }
-                        },
-                        ripple: {
-                            '0%': { transform: 'scale(0)', opacity: '0.5' },
-                            '100%': { transform: 'scale(4)', opacity: '0' }
-                        },
-                        float: {
-                            '0%, 100%': { transform: 'translateY(0px)' },
-                            '50%': { transform: 'translateY(-20px)' }
-                        },
-                        splash: {
-                            '0%': { transform: 'scale(0)', opacity: '1' },
-                            '100%': { transform: 'scale(3)', opacity: '0' }
-                        }
-                    }
-                }
-            }
-        }
-
-        /* Custom Styles */
+        /* ========== EFEK KACA (GLASS MORPHISM) ========== */
         .glass-card {
             background: rgba(10, 10, 10, 0.7);
-            backdrop-filter: blur(20px);
+            backdrop-filter: blur(20px); /* blur background */
             border: 1px solid rgba(0, 255, 136, 0.2);
         }
 
@@ -82,19 +38,20 @@
             border-color: rgba(0, 255, 136, 0.5);
         }
 
-        /* Paint Splash Effects */
+        /* ========== SPLASH BACKGROUND (EFEK CAT PERCIP) ========== */
         .paint-splash {
             position: fixed;
-            pointer-events: none;
+            pointer-events: none; /* biar tidak mengganggu klik */
             z-index: 0;
         }
 
+        /* 4 titik splash dengan warna dan animasi berbeda */
         .splash-1 { top: 10%; left: -5%; width: 300px; height: 300px; background: radial-gradient(circle, rgba(0,255,136,0.15) 0%, transparent 70%); animation: float 8s ease-in-out infinite; }
         .splash-2 { bottom: 5%; right: -5%; width: 400px; height: 400px; background: radial-gradient(circle, rgba(255,0,51,0.1) 0%, transparent 70%); animation: float 10s ease-in-out infinite reverse; }
         .splash-3 { top: 40%; right: 15%; width: 200px; height: 200px; background: radial-gradient(circle, rgba(128,0,255,0.12) 0%, transparent 70%); animation: float 7s ease-in-out infinite 2s; }
         .splash-4 { bottom: 20%; left: 10%; width: 250px; height: 250px; background: radial-gradient(circle, rgba(0,255,136,0.08) 0%, transparent 70%); animation: float 9s ease-in-out infinite 1s; }
 
-        /* Grunge Texture */
+        /* ========== TEXTURE GRUNGE (EFEK KOTOR/BAHAGIA) ========== */
         .grunge-overlay {
             position: fixed;
             top: 0;
@@ -106,55 +63,25 @@
             z-index: 1;
         }
 
-        /* Progress Bar */
+        /* ========== PROGRESS BAR (GARIS PUTAR LAGU) ========== */
         .progress-bar {
-            transition: width 0.1s linear;
+            transition: width 0.1s linear; /* animasi halus saat digeser */
         }
 
-        /* Custom Scrollbar */
+        /* ========== SCROLLBAR KUSTOM ========== */
         ::-webkit-scrollbar {
             width: 6px;
         }
-
         ::-webkit-scrollbar-track {
             background: rgba(255, 255, 255, 0.05);
             border-radius: 10px;
         }
-
         ::-webkit-scrollbar-thumb {
             background: rgba(0, 255, 136, 0.5);
             border-radius: 10px;
         }
 
-        ::-webkit-scrollbar-thumb:hover {
-            background: rgba(0, 255, 136, 0.8);
-        }
-
-        /* Ripple Effect */
-        .ripple-effect {
-            position: relative;
-            overflow: hidden;
-        }
-
-        .ripple-effect::after {
-            content: '';
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            width: 0;
-            height: 0;
-            border-radius: 50%;
-            background: rgba(0, 255, 136, 0.4);
-            transform: translate(-50%, -50%);
-            transition: width 0.6s, height 0.6s;
-        }
-
-        .ripple-effect:active::after {
-            width: 200px;
-            height: 200px;
-        }
-
-        /* Loading Animation */
+        /* ========== ANIMASI LOADING ========== */
         .loading-spinner {
             width: 40px;
             height: 40px;
@@ -168,67 +95,42 @@
             to { transform: rotate(360deg); }
         }
 
-        /* Blur Background Animation */
-        .blur-bg {
-            transition: filter 0.5s ease;
+        /* ========== ANIMASI FLOAT (MELAYANG) ========== */
+        @keyframes float {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-20px); }
         }
 
-        .playing .blur-bg {
-            filter: blur(8px);
-        }
-
-        /* Hover Effects */
-        .hover-glow:hover {
-            transform: scale(1.05);
-            box-shadow: 0 0 20px rgba(0, 255, 136, 0.3);
-            transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
-        }
-
+        /* ========== PLAYLIST ITEM (SATU BARIS LAGU) ========== */
         .playlist-item {
             transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
-
         .playlist-item:hover {
-            transform: translateX(8px);
+            transform: translateX(8px); /* geser ke kanan saat hover */
             background: rgba(0, 255, 136, 0.1);
         }
-
+        /* Lagu yang sedang aktif */
         .playlist-item.active {
-            background: linear-gradient(90deg, rgba(255, 0, 51, 0.2), transparent);
-            border-left: 3px solid #ff0033;
-            box-shadow: 0 0 15px rgba(255, 0, 51, 0.3);
+            background: linear-gradient(90deg, rgba(0, 255, 136, 0.2), transparent);
+            border-left: 3px solid #00ff88;
         }
 
-        /* Button Glow */
+        /* ========== TOMBOL GLOW (BERSINAR) ========== */
         .btn-glow {
             transition: all 0.3s ease;
         }
-
         .btn-glow:hover {
             filter: drop-shadow(0 0 8px #00ff88);
             transform: scale(1.05);
         }
 
-        .btn-glow:active {
-            transform: scale(0.95);
-        }
-
-        /* Cover Art Animation */
-        .cover-art {
-            transition: all 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
-        }
-
+        /* ========== COVER ART ANIMASI ========== */
         .cover-art.playing {
             animation: float 3s ease-in-out infinite;
             box-shadow: 0 0 30px rgba(0, 255, 136, 0.3);
         }
 
-        /* Fade Transition untuk konten */
-        .fade-transition {
-            transition: opacity 0.4s ease, transform 0.4s ease;
-        }
-
-        /* Responsive */
+        /* ========== RESPONSIVE HP ========== */
         @media (max-width: 768px) {
             .glass-card {
                 backdrop-filter: blur(15px);
@@ -237,7 +139,7 @@
     </style>
 </head>
 <body class="relative overflow-x-hidden">
-    <!-- Background Splash Paint -->
+    <!-- Background Splash (efek cat) -->
     <div class="fixed inset-0 overflow-hidden pointer-events-none z-0">
         <div class="splash-1 paint-splash rounded-full blur-3xl"></div>
         <div class="splash-2 paint-splash rounded-full blur-3xl"></div>
@@ -245,76 +147,71 @@
         <div class="splash-4 paint-splash rounded-full blur-3xl"></div>
     </div>
 
-    <!-- Grunge Texture -->
+    <!-- Texture grunge -->
     <div class="grunge-overlay"></div>
 
-    <!-- Main Container -->
+    <!-- MAIN CONTAINER -->
     <div class="relative z-10 min-h-screen flex items-center justify-center p-4 md:p-8">
         <div class="container mx-auto max-w-7xl">
-            <!-- Music Player Card -->
-            <div class="glass-card rounded-3xl p-6 md:p-8 shadow-2xl transition-all duration-500 hover:shadow-[0_0_50px_rgba(0,255,136,0.1)]">
+            <!-- CARD MUSIC PLAYER UTAMA -->
+            <div class="glass-card rounded-3xl p-6 md:p-8 shadow-2xl">
                 <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
                     
-                    <!-- Left Section - Cover & Info -->
+                    <!-- ========== BAGIAN KIRI: COVER + INFO LAGU ========== -->
                     <div class="lg:col-span-1 space-y-6">
                         <!-- Cover Art -->
                         <div class="relative group">
-                            <div class="cover-art rounded-2xl overflow-hidden shadow-2xl transition-all duration-500">
-                                <img id="coverArt" src="https://placehold.co/400/1a1a1a/00ff88?text=🎵" alt="Cover" class="w-full aspect-square object-cover transition-transform duration-700 group-hover:scale-110">
-                                <div class="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+                            <div class="cover-art rounded-2xl overflow-hidden shadow-2xl">
+                                <img id="coverArt" src="https://placehold.co/400/1a1a1a/00ff88?text=🎵" alt="Cover" class="w-full aspect-square object-cover">
                             </div>
-                            <!-- Playing Indicator -->
+                            <!-- Indikator lagu sedang diputar (titik hijau kedip) -->
                             <div id="playingIndicator" class="absolute top-4 right-4 w-3 h-3 bg-green-500 rounded-full animate-pulse hidden"></div>
                         </div>
 
-                        <!-- Song Info -->
+                        <!-- Info Lagu (judul & artis) -->
                         <div class="text-center space-y-2 fade-transition" id="songInfo">
-                            <h2 id="songTitle" class="text-2xl md:text-3xl font-bold text-white tracking-tight">Zombie Anthem</h2>
+                            <h2 id="songTitle" class="text-2xl md:text-3xl font-bold text-white">Zombie Anthem</h2>
                             <p id="songArtist" class="text-gray-400 text-sm md:text-base">The Undead</p>
                         </div>
 
-                        <!-- Progress Bar -->
+                        <!-- Progress Bar (garis waktu lagu) -->
                         <div class="space-y-2">
                             <div class="relative h-1.5 bg-gray-800 rounded-full overflow-hidden cursor-pointer group" id="progressContainer">
                                 <div id="progressFill" class="progress-bar absolute h-full bg-gradient-to-r from-green-500 to-red-500 rounded-full" style="width: 0%"></div>
-                                <div class="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity">
-                                    <div class="absolute top-1/2 -translate-y-1/2 w-3 h-3 bg-white rounded-full shadow-lg" id="progressThumb" style="left: 0%"></div>
-                                </div>
                             </div>
                             <div class="flex justify-between text-xs text-gray-500">
-                                <span id="currentTime">0:00</span>
-                                <span id="duration">0:00</span>
+                                <span id="currentTime">0:00</span> <!-- waktu sekarang -->
+                                <span id="duration">0:00</span> <!-- durasi total -->
                             </div>
                         </div>
 
-                        <!-- Controls -->
+                        <!-- Tombol Kontrol (Play, Prev, Next, Shuffle, Repeat) -->
                         <div class="flex items-center justify-center gap-4 md:gap-6">
-                            <button id="shuffleBtn" class="btn-glow w-10 h-10 rounded-full bg-gray-800/50 text-gray-400 hover:text-green-500 transition-all duration-300">
-                                <i class="fas fa-random"></i>
+                            <button id="shuffleBtn" class="btn-glow w-10 h-10 rounded-full bg-gray-800/50 text-gray-400">
+                                <i class="fas fa-random"></i> <!-- acak lagu -->
                             </button>
-                            <button id="prevBtn" class="btn-glow w-12 h-12 rounded-full bg-gray-800/50 text-white hover:bg-gray-700/50 transition-all duration-300">
-                                <i class="fas fa-backward-step text-lg"></i>
+                            <button id="prevBtn" class="btn-glow w-12 h-12 rounded-full bg-gray-800/50 text-white">
+                                <i class="fas fa-backward-step text-lg"></i> <!-- lagu sebelumnya -->
                             </button>
-                            <button id="playBtn" class="btn-glow w-16 h-16 rounded-full bg-gradient-to-br from-green-500 to-red-500 text-white shadow-lg hover:shadow-green-500/50 transition-all duration-300 relative overflow-hidden group">
-                                <i class="fas fa-play text-2xl relative z-10"></i>
-                                <div class="absolute inset-0 bg-white opacity-0 group-hover:opacity-20 transition-opacity duration-300"></div>
+                            <button id="playBtn" class="btn-glow w-16 h-16 rounded-full bg-gradient-to-br from-green-500 to-red-500 text-white shadow-lg">
+                                <i class="fas fa-play text-2xl"></i> <!-- play/pause -->
                             </button>
-                            <button id="nextBtn" class="btn-glow w-12 h-12 rounded-full bg-gray-800/50 text-white hover:bg-gray-700/50 transition-all duration-300">
-                                <i class="fas fa-forward-step text-lg"></i>
+                            <button id="nextBtn" class="btn-glow w-12 h-12 rounded-full bg-gray-800/50 text-white">
+                                <i class="fas fa-forward-step text-lg"></i> <!-- lagu selanjutnya -->
                             </button>
-                            <button id="repeatBtn" class="btn-glow w-10 h-10 rounded-full bg-gray-800/50 text-gray-400 hover:text-green-500 transition-all duration-300">
-                                <i class="fas fa-repeat"></i>
+                            <button id="repeatBtn" class="btn-glow w-10 h-10 rounded-full bg-gray-800/50 text-gray-400">
+                                <i class="fas fa-repeat"></i> <!-- ulang lagu -->
                             </button>
                         </div>
 
-                        <!-- Volume Control -->
+                        <!-- Volume Control (pengatur keras pelan suara) -->
                         <div class="flex items-center gap-3 px-2">
                             <i class="fas fa-volume-up text-gray-400 text-sm"></i>
-                            <input type="range" id="volumeSlider" min="0" max="1" step="0.01" value="0.7" class="flex-1 h-1 bg-gray-800 rounded-lg appearance-none cursor-pointer">
+                            <input type="range" id="volumeSlider" min="0" max="1" step="0.01" value="0.7" class="flex-1 h-1 bg-gray-800 rounded-lg cursor-pointer">
                         </div>
                     </div>
 
-                    <!-- Right Section - Playlist -->
+                    <!-- ========== BAGIAN KANAN: PLAYLIST (DAFTAR LAGU) ========== -->
                     <div class="lg:col-span-2">
                         <div class="flex items-center justify-between mb-6">
                             <h3 class="text-white font-semibold text-lg flex items-center gap-2">
@@ -324,37 +221,36 @@
                             <div class="text-xs text-gray-500" id="songCount">0 Lagu</div>
                         </div>
                         
-                        <!-- Playlist Container -->
-                        <div class="space-y-2 max-h-[400px] md:max-h-[500px] overflow-y-auto pr-2" id="playlistContainer">
-                            <!-- Playlist items akan diisi JavaScript -->
-                        </div>
+                        <!-- Tempat daftar lagu (diisi JavaScript) -->
+                        <div class="space-y-2 max-h-[400px] md:max-h-[500px] overflow-y-auto pr-2" id="playlistContainer"></div>
                     </div>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Loading Overlay -->
+    <!-- Loading Overlay (muncul saat ganti lagu) -->
     <div id="loadingOverlay" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center opacity-0 pointer-events-none transition-opacity duration-300">
         <div class="loading-spinner"></div>
     </div>
 
     <script>
-        // Playlist Data (simulasi lagu dari folder /music/)
+        // ========== DATA PLAYLIST (DAFTAR LAGU) ==========
+        // Setiap lagu punya: id, judul, artis, cover, url file MP3, durasi
         const playlist = [
             {
                 id: 1,
                 title: "King Menang28",
                 artist: "Ambatukamrudal",
-                cover: "https://placehold.co/400/1a1a1a/00ff88?text=🧟",
-                url: "music/Menang28.mp3",
+                cover: "https://i.pinimg.com/736x/0d/bf/fa/0dbffaeac67524207c723ae96d8ce89b.jpg",
+                url: "music/Menang28.mp3",  // PASTIKAN FILE ADA DI FOLDER music/
                 duration: "02:12"
             },
             {
                 id: 2,
                 title: "Kenak ss Zopim",
                 artist: "Gam Tempur",
-                cover: "https://placehold.co/400/1a1a1a/ff0033?text=🌙",
+                cover: "https://i.pinimg.com/736x/08/ca/28/08ca28713c45d2b6979051e78637477a.jpg",
                 url: "music/Kenak ss Zopim.mp3",
                 duration: "02:09"
             },
@@ -362,29 +258,28 @@
                 id: 3,
                 title: "Cashback",
                 artist: "Cukur Zembud",
-                cover: "https://placehold.co/400/1a1a1a/8800ff?text=⚰️",
+                cover: "https://i.pinimg.com/1200x/e9/af/ad/e9afadbd9b42c53aecd4f6d918cb71c2.jpg",
                 url: "music/CASHBACK.mp3",
                 duration: "02:03"
             },     
             {
-                id: 3,
-                title: "Word Ward Rongawi",
-                artist: "Cukur Zembud",
+                id: 4,
+                title: "World War Rongawi",
+                artist: "Rusdi Lipan",
                 cover: "https://i.pinimg.com/736x/14/ed/c1/14edc144366391b0dcf5fcdc8cc002f2.jpg",
                 url: "music/WORLD WAR RONGAWI.mp3",
                 duration: "5:09"
             }     
         ];
 
-        // State
-        let currentSongIndex = 0;
-        let isPlaying = false;
-        let isShuffle = false;
-        let isRepeat = false;
-        let audio = new Audio();
-        let isLoading = false;
+        // ========== STATE (VARIABEL GLOBAL UNTUK MENYIMPAN KONDISI) ==========
+        let currentSongIndex = 0;      // indeks lagu yang sedang diputar (0 = lagu pertama)
+        let isPlaying = false;          // status: sedang diputar atau tidak?
+        let isShuffle = false;          // mode acak? (true/false)
+        let isRepeat = false;           // mode ulang? (true/false)
+        let audio = new Audio();        // object audio bawaan HTML5
 
-        // DOM Elements
+        // ========== AMBIL ELEMENT HTML ==========
         const playBtn = document.getElementById('playBtn');
         const prevBtn = document.getElementById('prevBtn');
         const nextBtn = document.getElementById('nextBtn');
@@ -403,78 +298,110 @@
         const loadingOverlay = document.getElementById('loadingOverlay');
         const playingIndicator = document.getElementById('playingIndicator');
 
-        // Helper Functions
+        // ========== FUNGSI BANTUAN ==========
+        
+        // Format detik ke menit:detik (contoh: 125 detik -> 2:05)
         function formatTime(seconds) {
-            if (isNaN(seconds)) return '0:00';
+            if (isNaN(seconds) || !isFinite(seconds)) return '0:00';
             const mins = Math.floor(seconds / 60);
             const secs = Math.floor(seconds % 60);
             return `${mins}:${secs < 10 ? '0' : ''}${secs}`;
         }
 
+        // Munculkan loading spinner
         function showLoading() {
-            isLoading = true;
             loadingOverlay.classList.remove('opacity-0', 'pointer-events-none');
             loadingOverlay.classList.add('opacity-100', 'pointer-events-auto');
         }
 
+        // Sembunyikan loading spinner
         function hideLoading() {
             setTimeout(() => {
-                isLoading = false;
                 loadingOverlay.classList.add('opacity-0', 'pointer-events-none');
                 loadingOverlay.classList.remove('opacity-100', 'pointer-events-auto');
             }, 300);
         }
 
-        // Fade transition untuk ganti lagu
-        function fadeTransition(callback) {
-            const songInfo = document.getElementById('songInfo');
-            songInfo.style.opacity = '0';
-            songInfo.style.transform = 'translateY(10px)';
-            
-            setTimeout(() => {
-                callback();
-                songInfo.style.opacity = '1';
-                songInfo.style.transform = 'translateY(0)';
-            }, 200);
-        }
-
-        // Load song
+        // ========== FUNGSI UTAMA ==========
+        
+        // Memuat lagu berdasarkan indeks
         function loadSong(index) {
             const song = playlist[index];
             if (!song) return;
             
             showLoading();
             
-            // Simulasi loading (karena file lokal)
-            setTimeout(() => {
-                audio.src = song.url;
-                songTitle.textContent = song.title;
-                songArtist.textContent = song.artist;
-                coverArt.src = song.cover;
-                
-                // Update active playlist item
-                document.querySelectorAll('.playlist-item').forEach((item, i) => {
-                    if (i === index) {
-                        item.classList.add('active');
-                        item.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-                    } else {
-                        item.classList.remove('active');
-                    }
-                });
-                
-                // Reset progress
-                progressFill.style.width = '0%';
-                currentTimeSpan.textContent = '0:00';
-                
-                if (isPlaying) {
-                    audio.play().catch(e => console.log('Error playing:', e));
+            // Simpan status play sebelumnya
+            const wasPlaying = isPlaying;
+            
+            // Hentikan audio yang sedang berjalan
+            audio.pause();
+            
+            // Ganti source lagu
+            audio.src = song.url;
+            audio.load();  // reload audio
+            
+            // Update tampilan (judul, artis, cover)
+            songTitle.textContent = song.title;
+            songArtist.textContent = song.artist;
+            coverArt.src = song.cover;
+            
+            // Reset progress bar
+            progressFill.style.width = '0%';
+            currentTimeSpan.textContent = '0:00';
+            
+            // Tandai lagu aktif di playlist
+            document.querySelectorAll('.playlist-item').forEach((item, i) => {
+                if (i === index) {
+                    item.classList.add('active');
+                    item.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                } else {
+                    item.classList.remove('active');
                 }
-                
+            });
+            
+            // Saat metadata lagu sudah siap (durasi diketahui)
+            audio.onloadedmetadata = () => {
+                durationSpan.textContent = formatTime(audio.duration);
                 hideLoading();
-            }, 300);
+                
+                // Jika sebelumnya sedang diputar, lanjutkan play
+                if (wasPlaying) {
+                    audio.play().then(() => {
+                        isPlaying = true;
+                        updatePlayButtonUI(true);
+                    }).catch(error => {
+                        console.log('Auto-play dicegah browser:', error);
+                        isPlaying = false;
+                        updatePlayButtonUI(false);
+                    });
+                }
+            };
+            
+            // Jika gagal load file MP3
+            audio.onerror = () => {
+                hideLoading();
+                console.error('Gagal load:', song.url);
+                alert(`Gagal memuat lagu: ${song.title}\nPastikan file MP3 ada di folder music/`);
+            };
+            
+            renderPlaylist(); // refresh tampilan playlist
         }
 
-        // Render playlist
+        // Update tampilan tombol play (icon play/pause)
+        function updatePlayButtonUI(playing) {
+            if (playing) {
+                playBtn.innerHTML = '<i class="fas fa-pause text-2xl"></i>';
+                playingIndicator.classList.remove('hidden');
+                document.querySelector('.cover-art')?.classList.add('playing');
+            } else {
+                playBtn.innerHTML = '<i class="fas fa-play text-2xl"></i>';
+                playingIndicator.classList.add('hidden');
+                document.querySelector('.cover-art')?.classList.remove('playing');
+            }
+        }
+
+        // Membuat tampilan daftar playlist dari data
         function renderPlaylist() {
             playlistContainer.innerHTML = '';
             playlist.forEach((song, index) => {
@@ -489,18 +416,14 @@
                         <div class="text-gray-500 text-sm truncate">${song.artist}</div>
                     </div>
                     <div class="text-gray-600 text-sm">${song.duration}</div>
-                    ${index === currentSongIndex ? '<i class="fas fa-play text-green-500"></i>' : ''}
+                    ${index === currentSongIndex && isPlaying ? '<i class="fas fa-volume-up text-green-500"></i>' : ''}
                 `;
                 
+                // Klik item playlist untuk ganti lagu
                 item.addEventListener('click', () => {
                     if (currentSongIndex !== index) {
-                        fadeTransition(() => {
-                            currentSongIndex = index;
-                            loadSong(currentSongIndex);
-                            if (isPlaying) {
-                                audio.play();
-                            }
-                        });
+                        currentSongIndex = index;
+                        loadSong(currentSongIndex);
                     }
                 });
                 
@@ -509,149 +432,137 @@
             songCount.textContent = `${playlist.length} Lagu`;
         }
 
-        // Update progress
+        // Update progress bar saat lagu berjalan
         function updateProgress() {
-            if (audio.duration) {
+            if (audio.duration && !isNaN(audio.duration)) {
                 const progress = (audio.currentTime / audio.duration) * 100;
                 progressFill.style.width = `${progress}%`;
                 currentTimeSpan.textContent = formatTime(audio.currentTime);
-                durationSpan.textContent = formatTime(audio.duration);
             }
         }
 
-        // Play/Pause
+        // Play / Pause lagu
         function togglePlay() {
             if (isPlaying) {
                 audio.pause();
-                playBtn.innerHTML = '<i class="fas fa-play text-2xl relative z-10"></i>';
-                playingIndicator.classList.add('hidden');
-                document.querySelector('.cover-art')?.classList.remove('playing');
+                isPlaying = false;
+                updatePlayButtonUI(false);
             } else {
-                audio.play();
-                playBtn.innerHTML = '<i class="fas fa-pause text-2xl relative z-10"></i>';
-                playingIndicator.classList.remove('hidden');
-                document.querySelector('.cover-art')?.classList.add('playing');
+                audio.play().then(() => {
+                    isPlaying = true;
+                    updatePlayButtonUI(true);
+                }).catch(error => {
+                    alert('Klik halaman dulu untuk mulai memutar musik');
+                });
             }
-            isPlaying = !isPlaying;
-            renderPlaylist(); // Refresh playlist untuk update icon
+            renderPlaylist();
         }
 
-        // Next song
+        // Lagu selanjutnya (PENTING: ini yang bikin auto play next)
         function nextSong() {
-            fadeTransition(() => {
-                if (isShuffle) {
-                    let newIndex;
-                    do {
-                        newIndex = Math.floor(Math.random() * playlist.length);
-                    } while (newIndex === currentSongIndex && playlist.length > 1);
-                    currentSongIndex = newIndex;
-                } else {
-                    currentSongIndex = (currentSongIndex + 1) % playlist.length;
-                }
-                loadSong(currentSongIndex);
-                if (isPlaying) {
-                    audio.play();
-                }
-            });
+            if (isShuffle) {
+                // Mode acak: pilih indeks random beda dari sekarang
+                let newIndex;
+                do {
+                    newIndex = Math.floor(Math.random() * playlist.length);
+                } while (newIndex === currentSongIndex && playlist.length > 1);
+                currentSongIndex = newIndex;
+            } else {
+                // Mode normal: maju ke indeks berikutnya (kembali ke 0 jika sudah akhir)
+                currentSongIndex = (currentSongIndex + 1) % playlist.length;
+            }
+            loadSong(currentSongIndex);
         }
 
-        // Previous song
+        // Lagu sebelumnya
         function prevSong() {
-            fadeTransition(() => {
-                if (audio.currentTime > 3) {
-                    audio.currentTime = 0;
-                } else {
-                    currentSongIndex = (currentSongIndex - 1 + playlist.length) % playlist.length;
-                    loadSong(currentSongIndex);
-                    if (isPlaying) {
-                        audio.play();
-                    }
-                }
-            });
+            // Jika lagu sudah berjalan lebih dari 3 detik, balik ke awal
+            if (audio.currentTime > 3) {
+                audio.currentTime = 0;
+            } else {
+                // Jika kurang dari 3 detik, pindah ke lagu sebelumnya
+                currentSongIndex = (currentSongIndex - 1 + playlist.length) % playlist.length;
+                loadSong(currentSongIndex);
+            }
         }
 
-        // Event Listeners
+        // ========== EVENT LISTENER (MENANGANI KLIK) ==========
         playBtn.addEventListener('click', togglePlay);
         nextBtn.addEventListener('click', nextSong);
         prevBtn.addEventListener('click', prevSong);
         
+        // Tombol shuffle (acak)
         shuffleBtn.addEventListener('click', () => {
             isShuffle = !isShuffle;
             shuffleBtn.style.color = isShuffle ? '#00ff88' : '#9ca3af';
-            shuffleBtn.style.transform = 'scale(1.1)';
-            setTimeout(() => {
-                shuffleBtn.style.transform = 'scale(1)';
-            }, 200);
         });
         
+        // Tombol repeat (ulang)
         repeatBtn.addEventListener('click', () => {
             isRepeat = !isRepeat;
             repeatBtn.style.color = isRepeat ? '#00ff88' : '#9ca3af';
-            audio.loop = isRepeat;
-            repeatBtn.style.transform = 'scale(1.1)';
-            setTimeout(() => {
-                repeatBtn.style.transform = 'scale(1)';
-            }, 200);
+            audio.loop = isRepeat; // fitur repeat bawaan audio
         });
         
+        // Pengaturan volume
         volumeSlider.addEventListener('input', (e) => {
-            audio.volume = e.target.value;
+            audio.volume = parseFloat(e.target.value);
         });
         
+        // Klik pada progress bar untuk loncat waktu
         progressContainer.addEventListener('click', (e) => {
-            if (audio.duration) {
+            if (audio.duration && !isNaN(audio.duration)) {
                 const rect = progressContainer.getBoundingClientRect();
                 const pos = (e.clientX - rect.left) / rect.width;
                 audio.currentTime = pos * audio.duration;
             }
         });
         
-        audio.addEventListener('timeupdate', updateProgress);
+        // ========== EVENT AUDIO ==========
+        audio.addEventListener('timeupdate', updateProgress); // setiap kali waktu berubah
+        
+        // *** INI YANG MEMPERBAIKI AUTO NEXT ***
+        // Saat lagu selesai (ended), otomatis putar lagu berikutnya
         audio.addEventListener('ended', () => {
+            console.log('Lagu selesai, lanjut ke berikutnya...');
             if (isRepeat) {
+                // Mode repeat: putar ulang lagu yang sama
                 audio.currentTime = 0;
                 audio.play();
             } else {
+                // Mode normal: panggil nextSong()
                 nextSong();
             }
         });
         
-        audio.addEventListener('loadedmetadata', () => {
-            durationSpan.textContent = formatTime(audio.duration);
-            hideLoading();
-        });
-        
+        // Saat lagu mulai diputar
         audio.addEventListener('play', () => {
             isPlaying = true;
-            playingIndicator.classList.remove('hidden');
-            document.querySelector('.cover-art')?.classList.add('playing');
+            updatePlayButtonUI(true);
+            renderPlaylist();
         });
         
+        // Saat lagu di-pause
         audio.addEventListener('pause', () => {
             isPlaying = false;
-            playingIndicator.classList.add('hidden');
-            document.querySelector('.cover-art')?.classList.remove('playing');
+            updatePlayButtonUI(false);
+            renderPlaylist();
         });
 
-        // Ripple effect on buttons
-        document.querySelectorAll('.btn-glow').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                const ripple = document.createElement('span');
-                ripple.classList.add('ripple-effect');
-                btn.appendChild(ripple);
-                setTimeout(() => ripple.remove(), 600);
-            });
-        });
-
-        // Initialize
-        audio.volume = 0.7;
-        renderPlaylist();
-        loadSong(0);
+        // ========== INISIALISASI ==========
+        audio.volume = 0.7;      // set volume awal 70%
+        renderPlaylist();         // buat tampilan playlist
+        loadSong(0);             // load lagu pertama (indeks 0)
         
-        // Simulate click play untuk auto-play (bisa dihapus jika tidak ingin auto)
-        setTimeout(() => {
-            togglePlay();
-        }, 1000);
+        // Biar bisa auto-play, pengguna harus klik dulu (kebijakan browser)
+        document.body.addEventListener('click', function initAudio() {
+            if (!isPlaying && audio.src) {
+                togglePlay();
+                document.body.removeEventListener('click', initAudio);
+            }
+        }, { once: true });
+        
+        console.log('Music player siap! Klik di mana saja untuk mulai.');
     </script>
 </body>
 </html>
