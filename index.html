@@ -417,11 +417,12 @@
             setTimeout(() => toast.remove(), 2000);
         }
 
+        // ========== PERBAIKAN AUTO-PLAY NEXT ==========
         function loadSongById(songId) {
             const song = getSongById(songId);
             if (!song) return;
             showLoading();
-            const wasPlaying = isPlaying;
+            const wasPlaying = isPlaying;  // simpan status play sebelumnya
             audio.pause();
             audio.src = song.url;
             audio.load();
@@ -430,23 +431,35 @@
             coverArt.src = song.cover;
             progressFill.style.width = '0%';
             currentTimeSpan.textContent = '0:00';
+            
             audio.onloadedmetadata = () => {
                 durationSpan.textContent = formatTime(audio.duration);
                 hideLoading();
+                // Jika sebelumnya sedang diputar, mulai lagi setelah metadata siap
                 if (wasPlaying) {
-                    audio.play().then(() => {
-                        isPlaying = true;
-                        updatePlayButtonUI(true);
-                    }).catch(err => {
-                        console.log("Auto play error:", err);
-                        isPlaying = false;
-                        updatePlayButtonUI(false);
-                    });
+                    // Beri sedikit delay agar lebih stabil
+                    setTimeout(() => {
+                        audio.play().then(() => {
+                            isPlaying = true;
+                            updatePlayButtonUI(true);
+                        }).catch(err => {
+                            console.log("Auto play error:", err);
+                            isPlaying = false;
+                            updatePlayButtonUI(false);
+                        });
+                    }, 100);
                 } else {
                     updatePlayButtonUI(false);
                 }
             };
-            audio.onerror = () => { hideLoading(); alert(`Gagal memuat ${song.title}`); };
+            audio.onerror = () => { 
+                hideLoading(); 
+                alert(`Gagal memuat ${song.title}`);
+                // Jika error dan sedang play, coba next lagu? opsional
+                if (wasPlaying) {
+                    nextSong(); // coba lanjut ke lagu berikutnya jika error
+                }
+            };
             renderPlaylistTabs();
             refreshPlaylistView();
         }
@@ -489,6 +502,7 @@
             currentSongIndexInFiltered = newIndex;
             currentPlayingSongId = songs[newIndex].id;
             loadSongById(currentPlayingSongId);
+            // loadSongById akan melanjutkan play jika isPlaying true
         }
 
         function prevSong() {
@@ -517,7 +531,6 @@
             const saved = localStorage.getItem('y2k_playlists');
             if (saved) {
                 playlists = JSON.parse(saved);
-                // Tandai playlist utama sebagai permanent (jika ada)
                 const defaultPlaylist = playlists.find(p => p.name === "Playlist Utama" || p.id === 1);
                 if (defaultPlaylist) defaultPlaylist.permanent = true;
                 playlists.forEach(p => { if (p.name !== "Playlist Utama" && p.id !== 1) p.permanent = false; });
@@ -529,7 +542,6 @@
             if (savedId && playlists.find(p => p.id == savedId)) currentPlaylistId = parseInt(savedId);
             else currentPlaylistId = playlists[0].id;
             
-            // ========== PERBAIKAN: Sinkronkan playlist utama dengan master ==========
             syncPermanentPlaylistWithMaster();
         }
         
@@ -546,7 +558,6 @@
             updatePlayButtonUI(false);
         }
 
-        // Reset ke playlist default (semua lagu dari master)
         function resetToDefault() {
             if (confirm("Reset semua playlist ke default? Semua playlist tambahan akan hilang.")) {
                 const defaultId = Date.now();
@@ -617,14 +628,18 @@
             }
         });
         audio.addEventListener('timeupdate', updateProgress);
+        
+        // ========== PERBAIKAN ENDED EVENT ==========
         audio.addEventListener('ended', () => {
             if (isRepeat) {
                 audio.currentTime = 0;
                 audio.play().catch(e => console.log("Repeat play error:", e));
             } else {
+                // Panggil nextSong untuk lanjut otomatis
                 nextSong();
             }
         });
+        
         audio.addEventListener('play', () => { isPlaying=true; updatePlayButtonUI(true); refreshPlaylistView(); });
         audio.addEventListener('pause', () => { isPlaying=false; updatePlayButtonUI(false); refreshPlaylistView(); });
         searchInput.addEventListener('input', () => { refreshPlaylistView(); });
@@ -653,7 +668,6 @@
         cancelSelectPlaylist.addEventListener('click', () => { selectPlaylistModal.classList.remove('active'); });
         selectPlaylistModal.addEventListener('click', (e) => { if(e.target === selectPlaylistModal) selectPlaylistModal.classList.remove('active'); });
         
-        // Tombol reset
         document.getElementById('resetPlaylistBtn').addEventListener('click', resetToDefault);
 
         // Initialize
