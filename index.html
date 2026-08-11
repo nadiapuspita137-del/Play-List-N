@@ -52,6 +52,35 @@
         .delete-playlist-btn:hover { opacity: 1; color: #ff4444; }
         .add-to-playlist-btn { transition: all 0.2s; }
         .add-to-playlist-btn:hover { transform: scale(1.1); color: #00ff88 !important; }
+
+        /* Penyempurnaan UX, responsif, dan aksesibilitas */
+        button, input { -webkit-tap-highlight-color: transparent; }
+        button:focus-visible, input:focus-visible, [tabindex]:focus-visible {
+            outline: 2px solid #00ff88; outline-offset: 3px;
+        }
+        .brand-mark { width: 44px; height: 44px; border-radius: 14px; display: grid; place-items: center; background: linear-gradient(135deg, #00ff88, #ff1493); color: #090909; box-shadow: 0 10px 30px rgba(0,255,136,.18); }
+        .eyebrow { color: #00ff88; letter-spacing: .18em; text-transform: uppercase; font-size: .68rem; font-weight: 800; }
+        .status-pill { border: 1px solid rgba(0,255,136,.25); background: rgba(0,255,136,.08); }
+        .shortcut-key { border: 1px solid rgba(255,255,255,.15); background: rgba(255,255,255,.06); border-radius: .4rem; padding: .1rem .4rem; }
+        body.light .eyebrow { color: #d20b75; }
+        body.light .status-pill { border-color: rgba(210,11,117,.25); background: rgba(210,11,117,.08); color: #333; }
+        body.light input { color: #171717 !important; background: rgba(255,255,255,.75) !important; }
+        body.light .modal-content h3, body.light .modal-content { color: #171717; }
+        @media (max-width: 767px) {
+            .glass-card { border-radius: 1.25rem; padding: 1rem !important; }
+            .app-shell { padding: .75rem !important; align-items: flex-start !important; }
+            .toolbar { align-items: stretch !important; }
+            .toolbar .search-wrap { width: 100%; }
+            .toolbar .search-wrap input { width: 100%; }
+            .player-controls { gap: .65rem !important; }
+            .playlist-item { gap: .7rem !important; padding: .7rem !important; }
+            .playlist-item:hover { transform: none; }
+            #playlistContainer { max-height: 46vh; }
+            .desktop-hint { display: none; }
+        }
+        @media (prefers-reduced-motion: reduce) {
+            *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; scroll-behavior: auto !important; }
+        }
     </style>
 </head>
 <body class="relative overflow-x-hidden">
@@ -66,17 +95,29 @@
 
     <div id="sleepBadge" class="sleep-badge hidden"></div>
 
-    <div class="relative z-10 min-h-screen flex items-center justify-center p-4 md:p-8">
+    <div class="app-shell relative z-10 min-h-screen flex items-center justify-center p-4 md:p-8">
         <div class="container mx-auto max-w-7xl">
             <div class="glass-card rounded-3xl p-6 md:p-8 shadow-2xl">
-                <div class="flex justify-between items-center mb-4 flex-wrap gap-2">
+                <header class="flex items-center justify-between gap-4 mb-6">
+                    <div class="flex items-center gap-3 min-w-0">
+                        <div class="brand-mark flex-shrink-0" aria-hidden="true"><i class="fas fa-wave-square"></i></div>
+                        <div class="min-w-0">
+                            <div class="eyebrow">Music player</div>
+                            <h1 class="text-xl md:text-2xl font-extrabold text-white song-title truncate">Play List Ngawi</h1>
+                        </div>
+                    </div>
+                    <div class="status-pill rounded-full px-3 py-2 text-xs text-gray-300 whitespace-nowrap">
+                        <i class="fas fa-headphones mr-1 text-green-400"></i><span id="libraryCount">0 lagu</span>
+                    </div>
+                </header>
+                <div class="toolbar flex justify-between items-center mb-4 flex-wrap gap-3">
                     <div class="flex gap-2">
                         <button id="darkModeToggle" class="btn-glow bg-gray-800/50 text-white p-2 rounded-full w-10 h-10 flex items-center justify-center"><i class="fas fa-moon"></i></button>
                         <button id="sleepTimerBtn" class="btn-glow bg-gray-800/50 text-white p-2 rounded-full w-10 h-10 flex items-center justify-center"><i class="fas fa-hourglass-half"></i></button>
                         <button id="createPlaylistBtn" class="btn-glow bg-gray-800/50 text-white p-2 rounded-full w-10 h-10 flex items-center justify-center"><i class="fas fa-plus"></i></button>
                         <button id="resetPlaylistBtn" class="btn-glow bg-gray-800/50 text-white p-2 rounded-full w-10 h-10 flex items-center justify-center" title="Reset ke Playlist Default (semua lagu)"><i class="fas fa-undo-alt"></i></button>
                     </div>
-                    <div class="relative">
+                    <div class="search-wrap relative">
                         <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm"></i>
                         <input type="text" id="searchInput" placeholder="Cari lagu..." class="bg-gray-800/50 text-white rounded-full py-2 pl-9 pr-4 text-sm outline-none focus:ring-1 focus:ring-green-500 w-48">
                     </div>
@@ -104,7 +145,7 @@
                                 <span id="duration">0:00</span>
                             </div>
                         </div>
-                        <div class="flex items-center justify-center gap-4 md:gap-6">
+                        <div class="player-controls flex items-center justify-center gap-4 md:gap-6">
                             <button id="shuffleBtn" class="btn-glow w-10 h-10 rounded-full bg-gray-800/50 text-gray-400"><i class="fas fa-random"></i></button>
                             <button id="prevBtn" class="btn-glow w-12 h-12 rounded-full bg-gray-800/50 text-white"><i class="fas fa-backward-step text-lg"></i></button>
                             <button id="playBtn" class="btn-glow w-16 h-16 rounded-full bg-gradient-to-br from-green-500 to-red-500 text-white shadow-lg"><i class="fas fa-play text-2xl"></i></button>
@@ -112,8 +153,8 @@
                             <button id="repeatBtn" class="btn-glow w-10 h-10 rounded-full bg-gray-800/50 text-gray-400"><i class="fas fa-repeat"></i></button>
                         </div>
                         <div class="flex items-center gap-3 px-2">
-                            <i class="fas fa-volume-up text-gray-400 text-sm"></i>
-                            <input type="range" id="volumeSlider" min="0" max="1" step="0.01" value="0.7" class="flex-1 h-1 bg-gray-800 rounded-lg cursor-pointer">
+                            <button id="muteBtn" class="text-gray-400 text-sm w-6" aria-label="Bisukan suara"><i class="fas fa-volume-up"></i></button>
+                            <input type="range" id="volumeSlider" aria-label="Volume" min="0" max="1" step="0.01" value="0.7" class="flex-1 h-1 bg-gray-800 rounded-lg cursor-pointer">
                         </div>
                     </div>
 
@@ -123,7 +164,10 @@
                             <div class="flex flex-wrap gap-2" id="playlistTabsContainer"></div>
                             <div class="text-xs text-gray-500" id="songCount">0 Lagu</div>
                         </div>
-                        <div class="space-y-2 max-h-[400px] md:max-h-[500px] overflow-y-auto pr-2" id="playlistContainer"></div>
+                        <div class="space-y-2 max-h-[400px] md:max-h-[500px] overflow-y-auto pr-2" id="playlistContainer" aria-live="polite"></div>
+                        <div class="desktop-hint mt-4 text-center text-[11px] text-gray-600">
+                            <span class="shortcut-key">Space</span> putar/jeda &nbsp; <span class="shortcut-key">←</span><span class="shortcut-key">→</span> pindah lagu &nbsp; <span class="shortcut-key">M</span> bisukan
+                        </div>
                     </div>
                 </div>
             </div>
@@ -211,6 +255,8 @@
         const currentTimeSpan = document.getElementById('currentTime');
         const durationSpan = document.getElementById('duration');
         const volumeSlider = document.getElementById('volumeSlider');
+        const muteBtn = document.getElementById('muteBtn');
+        const libraryCount = document.getElementById('libraryCount');
         const songTitle = document.getElementById('songTitle');
         const songArtist = document.getElementById('songArtist');
         const coverArt = document.getElementById('coverArt');
@@ -465,6 +511,8 @@
         }
 
         function updatePlayButtonUI(playing) {
+            playBtn.setAttribute('aria-label', playing ? 'Jeda' : 'Putar');
+            document.title = playing ? `▶ ${songTitle.textContent} | Play List Ngawi` : 'Play List Ngawi | Music Player';
             if (playing) {
                 playBtn.innerHTML = '<i class="fas fa-pause text-2xl"></i>';
                 playingIndicator.classList.remove('hidden');
@@ -600,10 +648,15 @@
             document.getElementById('sleepBadge').classList.add('hidden');
         }
 
-        // Dark mode
+        // Tema tersimpan
         const darkToggle = document.getElementById('darkModeToggle');
+        if (localStorage.getItem('playlist_theme') === 'light') {
+            document.body.classList.add('light');
+            darkToggle.querySelector('i').className = 'fas fa-sun';
+        }
         darkToggle.addEventListener('click', () => {
             document.body.classList.toggle('light');
+            localStorage.setItem('playlist_theme', document.body.classList.contains('light') ? 'light' : 'dark');
             const icon = darkToggle.querySelector('i');
             if (document.body.classList.contains('light')) {
                 icon.classList.remove('fa-moon');
@@ -620,7 +673,17 @@
         prevBtn.addEventListener('click', prevSong);
         shuffleBtn.addEventListener('click', () => { isShuffle = !isShuffle; shuffleBtn.style.color = isShuffle ? '#ff1493' : '#9ca3af'; });
         repeatBtn.addEventListener('click', () => { isRepeat = !isRepeat; repeatBtn.style.color = isRepeat ? '#ff1493' : '#9ca3af'; audio.loop = isRepeat; });
-        volumeSlider.addEventListener('input', (e) => audio.volume = parseFloat(e.target.value));
+        volumeSlider.addEventListener('input', (e) => {
+            audio.volume = parseFloat(e.target.value);
+            audio.muted = false;
+            updateMuteUI();
+        });
+        function updateMuteUI() {
+            const icon = muteBtn.querySelector('i');
+            icon.className = audio.muted || audio.volume === 0 ? 'fas fa-volume-xmark' : (audio.volume < .5 ? 'fas fa-volume-low' : 'fas fa-volume-high');
+            muteBtn.setAttribute('aria-label', audio.muted ? 'Aktifkan suara' : 'Bisukan suara');
+        }
+        muteBtn.addEventListener('click', () => { audio.muted = !audio.muted; updateMuteUI(); });
         progressContainer.addEventListener('click', (e) => {
             if (audio.duration) {
                 const rect = progressContainer.getBoundingClientRect();
@@ -670,7 +733,28 @@
         
         document.getElementById('resetPlaylistBtn').addEventListener('click', resetToDefault);
 
+        // Kontrol keyboard, tombol modal, dan integrasi perangkat
+        document.querySelectorAll('button').forEach(btn => {
+            if (!btn.getAttribute('aria-label') && btn.title) btn.setAttribute('aria-label', btn.title);
+        });
+        document.addEventListener('keydown', (e) => {
+            const typing = ['INPUT', 'TEXTAREA'].includes(document.activeElement.tagName);
+            if (e.key === 'Escape') document.querySelectorAll('.modal.active').forEach(modal => modal.classList.remove('active'));
+            if (typing) return;
+            if (e.code === 'Space') { e.preventDefault(); togglePlay(); }
+            if (e.key === 'ArrowRight') nextSong();
+            if (e.key === 'ArrowLeft') prevSong();
+            if (e.key.toLowerCase() === 'm') { audio.muted = !audio.muted; updateMuteUI(); }
+        });
+        if ('mediaSession' in navigator) {
+            navigator.mediaSession.setActionHandler('play', togglePlay);
+            navigator.mediaSession.setActionHandler('pause', togglePlay);
+            navigator.mediaSession.setActionHandler('nexttrack', nextSong);
+            navigator.mediaSession.setActionHandler('previoustrack', prevSong);
+        }
+
         // Initialize
+        libraryCount.textContent = `${masterSongs.length} lagu`;
         loadPlaylistsFromLocal();
         renderPlaylistTabs();
         refreshPlaylistView();
@@ -681,11 +765,7 @@
             loadSongById(currentPlayingSongId);
         }
         audio.volume = 0.7;
-        // Auto-play hint
-        document.body.addEventListener('click', function initOnce() {
-            if (!isPlaying && audio.src) togglePlay();
-            document.body.removeEventListener('click', initOnce);
-        }, { once: true });
+        updateMuteUI();
     </script>
 </body>
 </html>
