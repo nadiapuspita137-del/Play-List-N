@@ -819,9 +819,11 @@
             if (!btn.getAttribute('aria-label') && btn.title) btn.setAttribute('aria-label', btn.title);
         });
         document.addEventListener('keydown', (e) => {
-            const typing = ['INPUT', 'TEXTAREA'].includes(document.activeElement.tagName);
+            const focusedElement = document.activeElement;
+            const typing = ['INPUT', 'TEXTAREA'].includes(focusedElement.tagName);
+            const usingProgressBar = focusedElement === progressContainer;
             if (e.key === 'Escape') document.querySelectorAll('.modal.active').forEach(modal => modal.classList.remove('active'));
-            if (typing) return;
+            if (typing || usingProgressBar || e.defaultPrevented) return;
             if (e.code === 'Space') { e.preventDefault(); togglePlay(); }
             if (e.key === 'ArrowRight') nextSong();
             if (e.key === 'ArrowLeft') prevSong();
