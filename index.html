@@ -26,7 +26,49 @@
         .splash-3 { top: 40%; right: 15%; width: 200px; height: 200px; background: radial-gradient(circle, rgba(0,255,255,0.15) 0%, transparent 70%); animation: float 7s ease-in-out infinite 2s; }
         .splash-4 { bottom: 20%; left: 10%; width: 250px; height: 250px; background: radial-gradient(circle, rgba(255,215,0,0.1) 0%, transparent 70%); animation: float 9s ease-in-out infinite 1s; }
         .grunge-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200"><filter id="noise"><feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="3" stitchTiles="stitch"/></filter><rect width="100%" height="100%" filter="url(%23noise)" opacity="0.03"/></svg>'); pointer-events: none; z-index: 1; }
-        .progress-bar { transition: width 0.1s linear; }
+        .progress-bar { transition: width 0.1s linear; pointer-events: none; }
+        #progressContainer {
+            position: relative;
+            height: 20px;
+            overflow: visible;
+            cursor: pointer;
+            touch-action: none;
+            user-select: none;
+        }
+        #progressContainer::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            right: 0;
+            top: 50%;
+            height: 6px;
+            transform: translateY(-50%);
+            border-radius: 999px;
+            background: #1f2937;
+        }
+        #progressFill {
+            top: 50%;
+            height: 6px;
+            transform: translateY(-50%);
+        }
+        #progressThumb {
+            position: absolute;
+            top: 50%;
+            left: 0%;
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            background: #fff;
+            border: 3px solid #00c96b;
+            box-shadow: 0 0 0 3px rgba(0,255,136,.16);
+            transform: translate(-50%, -50%);
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity .15s ease;
+        }
+        #progressContainer:hover #progressThumb,
+        #progressContainer:focus-visible #progressThumb,
+        #progressContainer.is-seeking #progressThumb { opacity: 1; }
         ::-webkit-scrollbar { width: 6px; }
         ::-webkit-scrollbar-track { background: rgba(255,255,255,0.05); border-radius: 10px; }
         ::-webkit-scrollbar-thumb { background: #ff1493; border-radius: 10px; }
@@ -137,8 +179,9 @@
                             <p id="songArtist" class="text-gray-400 text-sm md:text-base">The Undead</p>
                         </div>
                         <div class="space-y-2">
-                            <div class="relative h-1.5 bg-gray-800 rounded-full overflow-hidden cursor-pointer group" id="progressContainer">
-                                <div id="progressFill" class="progress-bar absolute h-full bg-gradient-to-r from-green-500 to-red-500 rounded-full" style="width: 0%"></div>
+                            <div id="progressContainer" role="slider" tabindex="0" aria-label="Posisi lagu" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" aria-valuetext="0:00 dari 0:00">
+                                <div id="progressFill" class="progress-bar absolute left-0 bg-gradient-to-r from-green-500 to-red-500 rounded-full" style="width: 0%"></div>
+                                <div id="progressThumb" aria-hidden="true"></div>
                             </div>
                             <div class="flex justify-between text-xs text-gray-500">
                                 <span id="currentTime">0:00</span>
@@ -565,8 +608,12 @@
 
         function updateProgress() {
             if (audio.duration && !isNaN(audio.duration)) {
-                progressFill.style.width = `${(audio.currentTime/audio.duration)*100}%`;
+                const percent = Math.min(100, Math.max(0, (audio.currentTime / audio.duration) * 100));
+                progressFill.style.width = `${percent}%`;
+                progressThumb.style.left = `${percent}%`;
                 currentTimeSpan.textContent = formatTime(audio.currentTime);
+                progressContainer.setAttribute('aria-valuenow', Math.round(percent));
+                progressContainer.setAttribute('aria-valuetext', `${formatTime(audio.currentTime)} dari ${formatTime(audio.duration)}`);
             }
         }
 
@@ -684,11 +731,45 @@
             muteBtn.setAttribute('aria-label', audio.muted ? 'Aktifkan suara' : 'Bisukan suara');
         }
         muteBtn.addEventListener('click', () => { audio.muted = !audio.muted; updateMuteUI(); });
-        progressContainer.addEventListener('click', (e) => {
-            if (audio.duration) {
-                const rect = progressContainer.getBoundingClientRect();
-                audio.currentTime = ((e.clientX - rect.left) / rect.width) * audio.duration;
-            }
+        const progressThumb = document.getElementById('progressThumb');
+        let isSeeking = false;
+
+        function seekFromClientX(clientX) {
+            if (!audio.duration || !Number.isFinite(audio.duration)) return;
+            const rect = progressContainer.getBoundingClientRect();
+            const ratio = Math.min(1, Math.max(0, (clientX - rect.left) / rect.width));
+            audio.currentTime = ratio * audio.duration;
+            updateProgress();
+        }
+
+        progressContainer.addEventListener('pointerdown', (e) => {
+            isSeeking = true;
+            progressContainer.classList.add('is-seeking');
+            progressContainer.setPointerCapture?.(e.pointerId);
+            seekFromClientX(e.clientX);
+        });
+        progressContainer.addEventListener('pointermove', (e) => {
+            if (isSeeking) seekFromClientX(e.clientX);
+        });
+        function finishSeeking(e) {
+            if (!isSeeking) return;
+            seekFromClientX(e.clientX);
+            isSeeking = false;
+            progressContainer.classList.remove('is-seeking');
+            if (progressContainer.hasPointerCapture?.(e.pointerId)) progressContainer.releasePointerCapture(e.pointerId);
+        }
+        progressContainer.addEventListener('pointerup', finishSeeking);
+        progressContainer.addEventListener('pointercancel', () => {
+            isSeeking = false;
+            progressContainer.classList.remove('is-seeking');
+        });
+        progressContainer.addEventListener('keydown', (e) => {
+            if (!audio.duration || !['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(e.key)) return;
+            e.preventDefault();
+            if (e.key === 'Home') audio.currentTime = 0;
+            else if (e.key === 'End') audio.currentTime = audio.duration;
+            else audio.currentTime = Math.min(audio.duration, Math.max(0, audio.currentTime + (e.key === 'ArrowRight' ? 5 : -5)));
+            updateProgress();
         });
         audio.addEventListener('timeupdate', updateProgress);
         
