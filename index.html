@@ -507,11 +507,12 @@
         }
 
         // ========== PERBAIKAN AUTO-PLAY NEXT ==========
-        function loadSongById(songId) {
+        function loadSongById(songId, autoplay = isPlaying) {
             const song = getSongById(songId);
             if (!song) return;
             showLoading();
-            const wasPlaying = isPlaying;  // simpan status play sebelumnya
+            // Simpan niat memutar sebelum audio.pause() memicu event pause.
+            const shouldAutoplay = Boolean(autoplay);
             audio.pause();
             audio.src = song.url;
             audio.load();
@@ -524,19 +525,17 @@
             audio.onloadedmetadata = () => {
                 durationSpan.textContent = formatTime(audio.duration);
                 hideLoading();
-                // Jika sebelumnya sedang diputar, mulai lagi setelah metadata siap
-                if (wasPlaying) {
-                    // Beri sedikit delay agar lebih stabil
-                    setTimeout(() => {
-                        audio.play().then(() => {
-                            isPlaying = true;
-                            updatePlayButtonUI(true);
-                        }).catch(err => {
-                            console.log("Auto play error:", err);
-                            isPlaying = false;
-                            updatePlayButtonUI(false);
-                        });
-                    }, 100);
+                // Auto-next membawa perintah putar eksplisit meski event pause
+                // dari lagu lama sudah sempat mengubah state isPlaying.
+                if (shouldAutoplay) {
+                    audio.play().then(() => {
+                        isPlaying = true;
+                        updatePlayButtonUI(true);
+                    }).catch(err => {
+                        console.log("Auto play error:", err);
+                        isPlaying = false;
+                        updatePlayButtonUI(false);
+                    });
                 } else {
                     updatePlayButtonUI(false);
                 }
@@ -545,8 +544,8 @@
                 hideLoading(); 
                 alert(`Gagal memuat ${song.title}`);
                 // Jika error dan sedang play, coba next lagu? opsional
-                if (wasPlaying) {
-                    nextSong(); // coba lanjut ke lagu berikutnya jika error
+                if (shouldAutoplay) {
+                    nextSong(true); // coba lanjut ke lagu berikutnya jika error
                 }
             };
             renderPlaylistTabs();
@@ -581,7 +580,7 @@
             refreshPlaylistView();
         }
 
-        function nextSong() {
+        function nextSong(autoplay = isPlaying) {
             const songs = getCurrentDisplaySongs();
             if (songs.length === 0) return;
             let newIndex;
@@ -592,8 +591,7 @@
             }
             currentSongIndexInFiltered = newIndex;
             currentPlayingSongId = songs[newIndex].id;
-            loadSongById(currentPlayingSongId);
-            // loadSongById akan melanjutkan play jika isPlaying true
+            loadSongById(currentPlayingSongId, autoplay);
         }
 
         function prevSong() {
@@ -779,8 +777,8 @@
                 audio.currentTime = 0;
                 audio.play().catch(e => console.log("Repeat play error:", e));
             } else {
-                // Panggil nextSong untuk lanjut otomatis
-                nextSong();
+                // Tetap putar walau event pause dari lagu lama sudah terjadi.
+                nextSong(true);
             }
         });
         
