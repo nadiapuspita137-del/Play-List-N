@@ -35,6 +35,8 @@ drop policy if exists "admin inserts songs" on songs; drop policy if exists "adm
 drop policy if exists "staff inserts owned songs" on songs;
 drop policy if exists "staff updates allowed songs" on songs;
 drop policy if exists "staff deletes allowed songs" on songs;
+drop policy if exists "public reads active songs" on songs;
+create policy "public reads active songs" on songs for select using(is_active=true or public.is_super_admin() or owner_id::text=auth.uid()::text);
 create policy "staff inserts owned songs" on songs for insert with check(public.can_add_song() and (public.is_super_admin() or owner_id::text=auth.uid()::text));
 create policy "staff updates allowed songs" on songs for update using(public.is_super_admin() or owner_id::text=auth.uid()::text) with check(public.is_super_admin() or owner_id::text=auth.uid()::text);
 create policy "staff deletes allowed songs" on songs for delete using(public.is_super_admin() or owner_id::text=auth.uid()::text);
