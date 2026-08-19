@@ -6,6 +6,10 @@ alter table public.profiles add column if not exists is_active boolean not null 
 alter table public.profiles add column if not exists current_session_token text;
 alter table public.profiles add column if not exists last_login_at timestamptz;
 alter table public.songs add column if not exists owner_id uuid references auth.users(id) on delete set null;
+alter table public.songs drop constraint if exists songs_publish_requires_audio;
+alter table public.songs add constraint songs_publish_requires_audio check (
+  is_active = false or nullif(btrim(audio_url),'') is not null or jsonb_array_length(coalesce(audio_parts,'[]'::jsonb)) > 0
+) not valid;
 
 update public.profiles set role='super_admin', song_quota=999999 where role='admin';
 alter table public.profiles add constraint profiles_role_check check(role in ('super_admin','editor','viewer'));
