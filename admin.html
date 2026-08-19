@@ -433,6 +433,36 @@
       .draft-state.saved {
         color: #00dc7c;
       }
+      .search-box {
+        position: relative;
+        min-width: min(340px, 100%);
+      }
+      .search-box:before {
+        content: "⌕";
+        position: absolute;
+        left: 14px;
+        top: 50%;
+        transform: translateY(-50%);
+        color: #72847d;
+        font-size: 20px;
+        pointer-events: none;
+      }
+      .search-box input {
+        width: 100%;
+        padding: 11px 40px 11px 40px;
+        border: 1px solid #2a3b35;
+        border-radius: 13px;
+        background: #080c0b;
+        color: #fff;
+        outline: 0;
+      }
+      .search-box input:focus {
+        border-color: #00dc7c;
+        box-shadow: 0 0 0 4px #00dc7c17;
+      }
+      .search-count {
+        margin: 9px 2px 14px;
+      }
       .publish-control {
         display: flex;
         align-items: center;
@@ -596,6 +626,15 @@
             <button id="statsRefresh" class="btn ghost">↻ Perbarui</button>
           </div>
           <div id="statsSummary" class="stat-summary"></div>
+          <div class="search-box">
+            <input
+              id="statsSearch"
+              type="search"
+              placeholder="Cari judul, artis, atau album…"
+              autocomplete="off"
+            />
+          </div>
+          <div id="statsSearchCount" class="muted search-count"></div>
           <div id="statsList" class="stats-table"></div>
         </section>
         <section class="card" style="margin-top: 16px">
@@ -702,6 +741,15 @@
           <p class="muted">
             Seret ikon ⋮⋮ untuk mengatur urutan. Urutan tersimpan otomatis.
           </p>
+          <div class="search-box">
+            <input
+              id="songSearch"
+              type="search"
+              placeholder="Cari judul, artis, album, status…"
+              autocomplete="off"
+            />
+          </div>
+          <div id="songSearchCount" class="muted search-count"></div>
           <div id="songList"></div>
         </section>
       </section>
@@ -718,6 +766,7 @@
           global: { headers: { "x-client-info": "playlist-admin" } },
         });
       let songs = [],
+        statsRows = [],
         currentUser = null,
         currentProfile = null,
         sessionWatch = null,
@@ -993,6 +1042,20 @@
           top = rows[0];
         $("statsSummary").innerHTML =
           `<div class="stat-card accent"><small>TOTAL PEMUTARAN</small><strong>${totalPlay.toLocaleString("id-ID")}</strong></div><div class="stat-card"><small>TOTAL DOWNLOAD</small><strong>${totalDown.toLocaleString("id-ID")}</strong></div><div class="stat-card"><small>LAGU TERATAS</small><strong style="font-size:17px">${esc(top?.title || "Belum ada data")}</strong></div>`;
+        statsRows = rows;
+        renderStats();
+      }
+      function renderStats() {
+        const term = $("statsSearch").value.trim().toLowerCase();
+        const rows = statsRows.filter((x) => {
+          const song = songs.find((s) => String(s.id) === String(x.id)) || {};
+          return [x.title, song.artist, song.album, song.genre]
+            .filter(Boolean)
+            .some((value) => String(value).toLowerCase().includes(term));
+        });
+        $("statsSearchCount").textContent = term
+          ? `${rows.length} dari ${statsRows.length} lagu ditemukan`
+          : `${statsRows.length} lagu dalam statistik`;
         $("statsList").innerHTML =
           rows
             .map((x, i) => {
@@ -1003,9 +1066,11 @@
                   : 0;
               return `<div class="stats-row"><span class="rank">${i + 1}</span><img src="${song.cover_url || "favi.jpg"}"><div><b>${esc(x.title)}</b><div class="muted">${esc(song.artist || "—")}</div></div><div class="metric">${x.plays || 0}<small>PLAY</small></div><div class="metric">${x.downloads || 0}<small>DOWNLOAD</small></div><div class="metric rate">${rate}%<small>RASIO</small></div></div>`;
             })
-            .join("") || '<p class="muted">Belum ada aktivitas pemutaran.</p>';
+            .join("") ||
+          `<p class="muted">${term ? "Lagu yang dicari tidak ditemukan." : "Belum ada aktivitas pemutaran."}</p>`;
       }
       $("statsRefresh").onclick = loadStats;
+      $("statsSearch").addEventListener("input", renderStats);
       async function loadAdmins() {
         const { data } = await db
           .from("profiles")
@@ -1055,8 +1120,23 @@
         else loadAdmins();
       };
       function render() {
+        const term = $("songSearch").value.trim().toLowerCase();
+        const filteredSongs = songs.filter((s) =>
+          [
+            s.title,
+            s.artist,
+            s.album,
+            s.genre,
+            s.is_active ? "publik aktif" : "draft draf",
+          ]
+            .filter(Boolean)
+            .some((value) => String(value).toLowerCase().includes(term)),
+        );
+        $("songSearchCount").textContent = term
+          ? `${filteredSongs.length} dari ${songs.length} lagu ditemukan`
+          : `${songs.length} lagu tersedia`;
         $("songList").innerHTML =
-          songs
+          filteredSongs
             .map((s) => {
               const allowed =
                 currentProfile.role === "super_admin" ||
@@ -1066,9 +1146,11 @@
               );
               return `<div class="song ${s.is_active ? "" : "inactive"}" draggable="${allowed}" data-id="${s.id}"><span class="drag">⋮⋮</span><img src="${s.cover_url || "favi.jpg"}"><div><b>${esc(s.title)}</b><div class="muted">${esc(s.artist)}${s.album ? " • " + esc(s.album) : ""} • <span style="color:${s.is_active ? "#00dc7c" : "#ffb454"}">${s.is_active ? "PUBLIK" : "DRAFT"}</span> • ${hasAudio ? "Audio siap" : "⚠ Audio belum ada"}${allowed ? "" : " • Dilindungi"}</div></div><div class="actions">${allowed ? `<button class="btn ghost" onclick="editSong('${s.id}')">Edit</button><button class="btn ghost" ${!s.is_active && !hasAudio ? "disabled title='Upload MP3 dahulu'" : ""} onclick="toggleSong('${s.id}',${!s.is_active})">${s.is_active ? "Jadikan Draft" : hasAudio ? "Publikasikan" : "Audio diperlukan"}</button><button class="btn danger" onclick="deleteSong('${s.id}')">Hapus</button>` : '<span class="pill">🔒 Milik Owner</span>'}</div></div>`;
             })
-            .join("") || '<p class="muted">Belum ada lagu.</p>';
+            .join("") ||
+          `<p class="muted">${term ? "Lagu yang dicari tidak ditemukan." : "Belum ada lagu."}</p>`;
         enableDrag();
       }
+      $("songSearch").addEventListener("input", render);
       function esc(v = "") {
         return String(v).replace(
           /[&<>"']/g,
