@@ -445,9 +445,43 @@
       }
       .admin-row .btn {
         width: auto;
-        min-width: 104px;
         padding: 8px 12px;
         font-size: 11px;
+      }
+      .admin-actions {
+        display: flex;
+        align-items: center;
+        justify-content: flex-end;
+        gap: 7px;
+        flex-wrap: wrap;
+      }
+      .quota-editor {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        padding: 5px 6px 5px 10px;
+        border: 1px solid #2b413a;
+        border-radius: 11px;
+        background: #080d0b;
+        color: #91a29b;
+        font-size: 11px;
+      }
+      .quota-editor input {
+        width: 58px;
+        padding: 5px 7px;
+        border: 1px solid #30453e;
+        border-radius: 7px;
+        background: #111b18;
+        color: #fff;
+        text-align: center;
+        outline: 0;
+      }
+      .quota-editor .btn {
+        min-width: 0;
+        padding: 6px 9px;
+      }
+      .page-view[data-view="dashboard"] > .stats {
+        margin-top: 20px;
       }
       .admin-email {
         margin-top: 3px;
@@ -487,6 +521,10 @@
           grid-column: 2;
           justify-self: start;
           min-width: 0;
+        }
+        .admin-actions {
+          grid-column: 2;
+          justify-content: flex-start;
         }
       }
       .admin-workspace {
@@ -1463,7 +1501,7 @@
           (data || [])
             .map(
               (x) =>
-                `<div class="admin-row"><span class="admin-avatar">♙</span><div><b>${esc(x.display_name || "Admin")}</b><div class="admin-email">${esc(x.email || "Email belum tersimpan")}</div><div class="muted">Kuota ${x.song_quota} lagu • ${x.is_active ? "Aktif" : "Nonaktif"}</div></div><button class="btn ${x.is_active ? "danger" : "primary"}" onclick="toggleAdmin('${x.id}',${!x.is_active})">${x.is_active ? "Nonaktifkan" : "Aktifkan"}</button></div>`,
+                `<div class="admin-row"><span class="admin-avatar">♙</span><div><b>${esc(x.display_name || "Admin")}</b><div class="admin-email">${esc(x.email || "Email belum tersimpan")}</div><div class="muted">${songs.filter((s) => String(s.owner_id) === String(x.id)).length} lagu digunakan • Kuota ${x.song_quota} • ${x.is_active ? "Aktif" : "Nonaktif"}</div></div><div class="admin-actions"><label class="quota-editor">Kuota <input id="quota-${x.id}" type="number" min="0" value="${x.song_quota}"><button type="button" class="btn ghost" onclick="updateAdminQuota('${x.id}')">Simpan</button></label><button type="button" class="btn ${x.is_active ? "danger" : "primary"}" onclick="toggleAdmin('${x.id}',${!x.is_active})">${x.is_active ? "Nonaktifkan" : "Aktifkan"}</button></div></div>`,
             )
             .join("") || '<p class="muted">Belum ada admin tambahan.</p>';
       }
@@ -1502,6 +1540,28 @@
           .eq("id", id);
         if (error) alert(error.message);
         else loadAdmins();
+      };
+      window.updateAdminQuota = async (id) => {
+        const input = $(`quota-${id}`),
+          quota = Number(input?.value);
+        if (!Number.isInteger(quota) || quota < 0)
+          return msg(
+            "adminMsg",
+            "Kuota harus berupa angka 0 atau lebih.",
+            true,
+          );
+        const { error } = await db
+          .from("profiles")
+          .update({ song_quota: quota })
+          .eq("id", id);
+        if (error)
+          return msg(
+            "adminMsg",
+            `Gagal mengubah kuota: ${error.message}`,
+            true,
+          );
+        msg("adminMsg", `Kuota admin berhasil diubah menjadi ${quota} lagu.`);
+        loadAdmins();
       };
       function render() {
         const term = $("songSearch").value.trim().toLowerCase();
