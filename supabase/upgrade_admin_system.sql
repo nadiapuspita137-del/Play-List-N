@@ -1,6 +1,7 @@
 -- Upgrade role, kuota, kepemilikan lagu, dan statistik.
 alter table public.profiles drop constraint if exists profiles_role_check;
 alter table public.profiles add column if not exists display_name text;
+alter table public.profiles add column if not exists email text;
 alter table public.profiles add column if not exists song_quota integer not null default 0 check(song_quota >= 0);
 alter table public.profiles add column if not exists is_active boolean not null default true;
 alter table public.profiles add column if not exists current_session_token text;
