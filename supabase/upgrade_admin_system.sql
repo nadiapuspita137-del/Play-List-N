@@ -3,10 +3,10 @@ alter table public.profiles drop constraint if exists profiles_role_check;
 alter table public.profiles add column if not exists display_name text;
 alter table public.profiles add column if not exists song_quota integer not null default 0 check(song_quota >= 0);
 alter table public.profiles add column if not exists is_active boolean not null default true;
-alter table public.profiles add constraint profiles_role_check check(role in ('super_admin','editor','viewer'));
 alter table public.songs add column if not exists owner_id uuid references auth.users(id) on delete set null;
 
 update public.profiles set role='super_admin', song_quota=999999 where role='admin';
+alter table public.profiles add constraint profiles_role_check check(role in ('super_admin','editor','viewer'));
 
 create table if not exists public.song_events(
  id bigint generated always as identity primary key,
