@@ -455,6 +455,30 @@
         font-size: 12px;
         overflow-wrap: anywhere;
       }
+      .quota-notice {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        padding: 13px 15px;
+        margin: -4px 0 16px;
+        border: 1px solid #285044;
+        border-radius: 14px;
+        background: #0c1a16;
+        color: #bcefd8;
+        font-size: 13px;
+      }
+      .quota-notice strong {
+        color: #00e786;
+      }
+      .quota-notice.full {
+        border-color: #74313a;
+        background: #251116;
+        color: #ffabb3;
+      }
+      .quota-notice.full strong {
+        color: #ff7f8b;
+      }
       @media (max-width: 560px) {
         .admin-row {
           grid-template-columns: 38px minmax(0, 1fr);
@@ -920,6 +944,7 @@
             </section>
             <section class="card page-view" data-view="song-form">
               <h2 id="formTitle">Tambah Lagu</h2>
+              <div id="quotaNotice" class="quota-notice"></div>
               <div class="draft-bar">
                 <div>
                   <b>Draft Lagu</b>
@@ -1357,8 +1382,32 @@
         $("totalStat").textContent = `${songs.length} lagu`;
         $("activeStat").textContent =
           `${songs.filter((x) => x.is_active).length} aktif`;
+        updateQuotaNotice();
         render();
         repairMissingDurations();
+      }
+      function quotaInfo() {
+        if (currentProfile?.role === "super_admin")
+          return { used: 0, limit: Infinity, remaining: Infinity };
+        const used = songs.filter(
+            (song) => String(song.owner_id) === String(currentUser?.id),
+          ).length,
+          limit = Number(currentProfile?.song_quota || 0);
+        return { used, limit, remaining: Math.max(0, limit - used) };
+      }
+      function updateQuotaNotice() {
+        const box = $("quotaNotice");
+        if (!box || !currentProfile) return;
+        if (currentProfile.role === "super_admin") {
+          box.classList.remove("full");
+          box.innerHTML = `<span>Kuota upload akun Owner</span><strong>Tanpa batas</strong>`;
+          return;
+        }
+        const { used, limit, remaining } = quotaInfo();
+        box.classList.toggle("full", remaining === 0);
+        box.innerHTML = remaining
+          ? `<span>Kuota lagu: <strong>${used} dari ${limit}</strong> sudah digunakan</span><span>Sisa ${remaining} lagu</span>`
+          : `<span><strong>Kuota lagu sudah habis</strong><br>Hapus lagu milikmu atau hubungi Owner untuk menambah kuota.</span><span>${used}/${limit}</span>`;
       }
       async function loadStats() {
         const { data, error } = await db
@@ -1552,6 +1601,15 @@
           old = songs.find((x) => x.id === id);
         if (!id && !audio)
           return msg("formMsg", "File MP3 wajib dipilih.", true);
+        if (!id && currentProfile.role !== "super_admin") {
+          const { used, limit, remaining } = quotaInfo();
+          if (remaining === 0)
+            return msg(
+              "formMsg",
+              `Kuota lagu sudah habis (${used} dari ${limit}). Hubungi Owner untuk menambah kuota.`,
+              true,
+            );
+        }
         $("saveBtn").disabled = true;
         $("progress").style.width = "8%";
         try {
@@ -1600,7 +1658,11 @@
           resetForm();
           await loadSongs();
         } catch (err) {
-          msg("formMsg", err.message, true);
+          const friendlyError =
+            !id && /row-level security|policy/i.test(err.message || "")
+              ? "Lagu tidak dapat ditambahkan. Kuota akun mungkin sudah habis atau akses upload belum diizinkan. Hubungi Owner."
+              : err.message;
+          msg("formMsg", friendlyError, true);
         } finally {
           $("saveBtn").disabled = false;
           setTimeout(() => ($("progress").style.width = "0"), 700);
