@@ -12,7 +12,7 @@ alter table public.profiles
     'publish_song', true
   );
 
--- Pastikan editor lama tidak tiba-tiba kehilangan akses setelah migration.
+-- Editor lama mendapat semua akses agar perubahan ini backward-compatible.
 update public.profiles
 set permissions = jsonb_build_object(
   'view_dashboard', true,
@@ -23,7 +23,7 @@ set permissions = jsonb_build_object(
   'delete_song', true,
   'publish_song', true
 )
-where role = 'editor' and permissions is null;
+where role = 'editor';
 
 create or replace function public.has_permission(p_permission text)
 returns boolean
@@ -69,7 +69,7 @@ with check (
   and (public.is_super_admin() or owner_id = auth.uid())
 );
 
--- Update dasar tetap mensyaratkan edit_song. Trigger di bawah memisahkan edit dan publish.
+-- Update policy mengizinkan edit atau publish; trigger di bawah memisahkan kedua hak tersebut.
 drop policy if exists "staff updates allowed songs" on public.songs;
 create policy "staff updates allowed songs"
 on public.songs for update
@@ -77,18 +77,18 @@ using (
   public.is_super_admin()
   or (
     owner_id = auth.uid()
-    and public.has_permission('edit_song')
+    and (public.has_permission('edit_song') or public.has_permission('publish_song'))
   )
 )
 with check (
   public.is_super_admin()
   or (
     owner_id = auth.uid()
-    and public.has_permission('edit_song')
+    and (public.has_permission('edit_song') or public.has_permission('publish_song'))
   )
 );
 
--- Trigger mencegah editor dengan akses Edit saja mengubah status publikasi.
+-- Pisahkan hak Edit dan Publikasi pada level database.
 create or replace function public.enforce_song_permission_changes()
 returns trigger
 language plpgsql security definer set search_path = public
