@@ -51,8 +51,8 @@ drop policy if exists "staff uploads own media" on storage.objects;
 drop policy if exists "staff updates own media" on storage.objects;
 drop policy if exists "staff deletes own media" on storage.objects;
 create policy "staff uploads own media" on storage.objects for insert with check(bucket_id in ('audio','covers') and public.is_staff() and (public.is_super_admin() or (storage.foldername(name))[1]=auth.uid()::text));
-create policy "staff updates own media" on storage.objects for update using(bucket_id in ('audio','covers') and (public.is_super_admin() or owner_id=auth.uid()));
-create policy "staff deletes own media" on storage.objects for delete using(bucket_id in ('audio','covers') and (public.is_super_admin() or owner_id=auth.uid()));
+create policy "staff updates own media" on storage.objects for update using(bucket_id in ('audio','covers') and (public.is_super_admin() or owner_id=auth.uid()::text));
+create policy "staff deletes own media" on storage.objects for delete using(bucket_id in ('audio','covers') and (public.is_super_admin() or owner_id=auth.uid()::text));
 
 create or replace view public.song_stats as select s.id,s.title,s.owner_id,count(*) filter(where e.event_type='play')::int plays,count(*) filter(where e.event_type='download')::int downloads from songs s left join song_events e on e.song_id=s.id group by s.id;
 grant select on public.song_stats to authenticated;
