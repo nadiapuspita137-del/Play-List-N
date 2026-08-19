@@ -101,6 +101,11 @@
         .download-song-btn:disabled { cursor: wait; opacity: .65; transform: none; }
         .lyrics-live { min-height: 54px; display:grid; place-items:center; text-align:center; padding:10px; border-radius:14px; background:rgba(0,255,136,.06); color:#9ca3af; transition:.25s; }
         .lyrics-live.has-line { color:#fff; border:1px solid rgba(0,255,136,.22); text-shadow:0 0 16px rgba(0,255,136,.35); }
+        .audio-status { display:flex; align-items:center; justify-content:center; gap:7px; min-height:25px; color:#87938f; font-size:11px; font-weight:700; letter-spacing:.04em; }
+        .audio-status.loading { color:#ff56ad; }
+        .audio-status.ready { color:#00df7c; }
+        .audio-status.error { color:#ff6872; }
+        .audio-status .status-spinner { width:12px; height:12px; border:2px solid rgba(255,86,173,.25); border-top-color:#ff56ad; border-radius:50%; animation:spin .65s linear infinite; }
 
         /* Penyempurnaan UX, responsif, dan aksesibilitas */
         button, input { -webkit-tap-highlight-color: transparent; }
@@ -186,6 +191,7 @@
                             <p id="songArtist" class="text-gray-400 text-sm md:text-base">The Undead</p>
                         </div>
                         <div id="lyricsLive" class="lyrics-live text-sm">Lirik akan tampil di sini</div>
+                        <div id="audioStatus" class="audio-status" role="status" aria-live="polite"><i class="fas fa-circle text-[6px]"></i><span>Siap memilih lagu</span></div>
                         <div class="space-y-2">
                             <div id="progressContainer" role="slider" tabindex="0" aria-label="Posisi lagu" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" aria-valuetext="0:00 dari 0:00">
                                 <div id="progressFill" class="progress-bar absolute left-0 bg-gradient-to-r from-green-500 to-red-500 rounded-full" style="width: 0%"></div>
@@ -325,6 +331,7 @@
         const playlistListContainer = document.getElementById('playlistListContainer');
         const cancelSelectPlaylist = document.getElementById('cancelSelectPlaylist');
         const lyricsLive = document.getElementById('lyricsLive');
+        const audioStatus = document.getElementById('audioStatus');
         let activeLyrics = [];
 
         // Helper functions
@@ -337,6 +344,11 @@
         function showLoading() { loadingOverlay.classList.remove('opacity-0','pointer-events-none'); loadingOverlay.classList.add('opacity-100','pointer-events-auto'); }
         function hideLoading() { setTimeout(() => { loadingOverlay.classList.add('opacity-0','pointer-events-none'); loadingOverlay.classList.remove('opacity-100','pointer-events-auto'); }, 300); }
         function getSongById(id) { return masterSongs.find(s => s.id === id); }
+        function setAudioStatus(state, text) {
+            audioStatus.className = `audio-status ${state}`;
+            const icon = state === 'loading' ? '<i class="status-spinner"></i>' : state === 'error' ? '<i class="fas fa-triangle-exclamation"></i>' : state === 'ready' ? '<i class="fas fa-wave-square"></i>' : '<i class="fas fa-circle text-[6px]"></i>';
+            audioStatus.innerHTML = `${icon}<span>${text}</span>`;
+        }
         function parseLrc(text='') {
             return text.split(/\r?\n/).flatMap(line => {
                 const lyric = line.replace(/\[\d{1,2}:\d{2}(?:\.\d{1,3})?\]/g, '').trim();
@@ -604,6 +616,7 @@
             const shouldAutoplay = Boolean(autoplay);
             const needsAssembly = Boolean(song.parts?.length && !assembledSongUrls.has(song.id));
             if (needsAssembly) showLoading();
+            setAudioStatus('loading', needsAssembly ? 'Menyatukan file lagu…' : 'Menyiapkan lagu…');
             audio.pause();
             songTitle.textContent = song.title;
             songArtist.textContent = song.artist;
@@ -620,6 +633,7 @@
                 console.error(`Gagal memuat ${song.title}:`, error);
                 lyricsLive.textContent = `File ${song.title} tidak dapat dimuat`;
                 lyricsLive.classList.remove('has-line');
+                setAudioStatus('error', 'Lagu gagal dimuat');
                 isPlaying = false;
                 updatePlayButtonUI(false);
                 return;
@@ -631,22 +645,26 @@
                 audio.play().then(() => {
                     isPlaying = true;
                     updatePlayButtonUI(true);
+                    setAudioStatus('ready', 'Sedang diputar');
                 }).catch(err => {
                     console.log('Streaming belum siap:', err);
                     isPlaying = false;
                     updatePlayButtonUI(false);
+                    setAudioStatus('error', 'Belum dapat diputar');
                 });
             } else {
                 updatePlayButtonUI(false);
             }
             audio.onloadedmetadata = () => {
                 if (Number.isFinite(audio.duration)) durationSpan.textContent = formatTime(audio.duration);
+                if (!isPlaying) setAudioStatus('ready', 'Siap diputar');
             };
             audio.onerror = () => { 
                 hideLoading(); 
                 console.error(`File audio ${song.title} tidak tersedia`);
                 lyricsLive.textContent = `File ${song.title} tidak tersedia`;
                 lyricsLive.classList.remove('has-line');
+                setAudioStatus('error', 'File audio tidak tersedia');
                 isPlaying = false;
                 updatePlayButtonUI(false);
             };
@@ -884,8 +902,13 @@
             }
         });
         
+        audio.addEventListener('loadstart', () => setAudioStatus('loading', 'Memuat audio…'));
+        audio.addEventListener('waiting', () => setAudioStatus('loading', 'Buffering…'));
+        audio.addEventListener('stalled', () => setAudioStatus('loading', 'Koneksi audio melambat…'));
+        audio.addEventListener('canplay', () => { if (!isPlaying) setAudioStatus('ready', 'Siap diputar'); });
+        audio.addEventListener('playing', () => setAudioStatus('ready', 'Sedang diputar'));
         audio.addEventListener('play', () => { isPlaying=true; updatePlayButtonUI(true); refreshPlaylistView(); });
-        audio.addEventListener('pause', () => { isPlaying=false; updatePlayButtonUI(false); refreshPlaylistView(); });
+        audio.addEventListener('pause', () => { isPlaying=false; updatePlayButtonUI(false); if(audio.currentTime>0&&!audio.ended)setAudioStatus('', 'Dijeda'); refreshPlaylistView(); });
         searchInput.addEventListener('input', () => { refreshPlaylistView(); });
         
         document.getElementById('sleepTimerBtn').addEventListener('click', () => { sleepModal.classList.add('active'); });
