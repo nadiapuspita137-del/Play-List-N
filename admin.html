@@ -449,6 +449,12 @@
         padding: 8px 12px;
         font-size: 11px;
       }
+      .admin-email {
+        margin-top: 3px;
+        color: #c3d0cb;
+        font-size: 12px;
+        overflow-wrap: anywhere;
+      }
       @media (max-width: 560px) {
         .admin-row {
           grid-template-columns: 38px minmax(0, 1fr);
@@ -1408,7 +1414,7 @@
           (data || [])
             .map(
               (x) =>
-                `<div class="admin-row"><span class="admin-avatar">♙</span><div><b>${esc(x.display_name || "Admin")}</b><div class="muted">Kuota ${x.song_quota} lagu • ${x.is_active ? "Aktif" : "Nonaktif"}</div></div><button class="btn ${x.is_active ? "danger" : "primary"}" onclick="toggleAdmin('${x.id}',${!x.is_active})">${x.is_active ? "Nonaktifkan" : "Aktifkan"}</button></div>`,
+                `<div class="admin-row"><span class="admin-avatar">♙</span><div><b>${esc(x.display_name || "Admin")}</b><div class="admin-email">${esc(x.email || "Email belum tersimpan")}</div><div class="muted">Kuota ${x.song_quota} lagu • ${x.is_active ? "Aktif" : "Nonaktif"}</div></div><button class="btn ${x.is_active ? "danger" : "primary"}" onclick="toggleAdmin('${x.id}',${!x.is_active})">${x.is_active ? "Nonaktifkan" : "Aktifkan"}</button></div>`,
             )
             .join("") || '<p class="muted">Belum ada admin tambahan.</p>';
       }
@@ -1431,6 +1437,7 @@
           id: data.user.id,
           role: "editor",
           display_name: $("newAdminName").value,
+          email: $("newAdminEmail").value.trim().toLowerCase(),
           song_quota: +$("newAdminQuota").value,
           is_active: true,
         });
