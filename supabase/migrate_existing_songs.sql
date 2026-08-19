@@ -25,3 +25,14 @@ on conflict (id) do update set
  audio_url=excluded.audio_url, audio_parts=excluded.audio_parts,
  duration_seconds=excluded.duration_seconds, sort_order=excluded.sort_order,
  is_active=excluded.is_active, updated_at=now();
+
+-- Simpan media bawaan sebagai path relatif agar berfungsi di Cloudflare Pages,
+-- GitHub Pages, maupun domain lain tanpa perlu mengubah database lagi.
+update public.songs
+set audio_url = replace(audio_url, 'https://nadiapuspita137-del.github.io/Play-List-N/', ''),
+    cover_url = replace(cover_url, 'https://nadiapuspita137-del.github.io/Play-List-N/', ''),
+    audio_parts = case when audio_parts is null then null else (
+      select jsonb_agg(replace(value #>> '{}', 'https://nadiapuspita137-del.github.io/Play-List-N/', '') order by ordinality)
+      from jsonb_array_elements(audio_parts) with ordinality
+    ) end
+where id::text like '00000000-0000-4000-8000-%';

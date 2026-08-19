@@ -343,6 +343,10 @@
                 return [...line.matchAll(/\[(\d{1,2}):(\d{2}(?:\.\d{1,3})?)\]/g)].map(m => ({ time: Number(m[1])*60+Number(m[2]), text: lyric }));
             }).sort((a,b)=>a.time-b.time);
         }
+        function normalizeMediaUrl(url) {
+            if (!url) return url;
+            return url.replace(/^https:\/\/nadiapuspita137-del\.github\.io\/Play-List-N\//, '');
+        }
         function updateLyrics() {
             if (!activeLyrics.length) { lyricsLive.textContent='Lirik belum tersedia'; lyricsLive.classList.remove('has-line'); return; }
             const line=[...activeLyrics].reverse().find(x=>x.time<=audio.currentTime+.12);
@@ -355,7 +359,7 @@
                 const client=supabase.createClient(cfg.url,cfg.publishableKey);
                 const {data,error}=await client.from('songs').select('*').eq('is_active',true).order('sort_order');
                 if (error) throw error;
-                if (data?.length) masterSongs=data.map((s,i)=>({id:s.id,title:s.title,artist:s.artist,album:s.album,cover:s.cover_url||'favi.jpg',url:s.audio_parts?.length?null:s.audio_url,parts:s.audio_parts||null,duration:s.duration_seconds?formatTime(s.duration_seconds):'--:--',lyrics_lrc:s.lyrics_lrc||'',sort_order:s.sort_order??i}));
+                if (data?.length) masterSongs=data.map((s,i)=>({id:s.id,title:s.title,artist:s.artist,album:s.album,cover:normalizeMediaUrl(s.cover_url)||'favi.jpg',url:s.audio_parts?.length?null:normalizeMediaUrl(s.audio_url),parts:s.audio_parts?.map(normalizeMediaUrl)||null,duration:s.duration_seconds?formatTime(s.duration_seconds):'--:--',lyrics_lrc:s.lyrics_lrc||'',sort_order:s.sort_order??i}));
             } catch(error) { console.warn('Supabase belum siap, memakai koleksi lokal:',error.message); }
         }
         function getCurrentDisplaySongs() {
@@ -604,8 +608,11 @@
                 audio.src = await resolveSongUrl(song);
             } catch (error) {
                 hideLoading();
-                alert(`Gagal memuat ${song.title}`);
-                if (shouldAutoplay) nextSong(true);
+                console.error(`Gagal memuat ${song.title}:`, error);
+                lyricsLive.textContent = `File ${song.title} tidak dapat dimuat`;
+                lyricsLive.classList.remove('has-line');
+                isPlaying = false;
+                updatePlayButtonUI(false);
                 return;
             }
             audio.load();
@@ -637,11 +644,11 @@
             };
             audio.onerror = () => { 
                 hideLoading(); 
-                alert(`Gagal memuat ${song.title}`);
-                // Jika error dan sedang play, coba next lagu? opsional
-                if (shouldAutoplay) {
-                    nextSong(true); // coba lanjut ke lagu berikutnya jika error
-                }
+                console.error(`File audio ${song.title} tidak tersedia`);
+                lyricsLive.textContent = `File ${song.title} tidak tersedia`;
+                lyricsLive.classList.remove('has-line');
+                isPlaying = false;
+                updatePlayButtonUI(false);
             };
             renderPlaylistTabs();
             refreshPlaylistView();
