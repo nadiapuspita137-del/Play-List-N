@@ -20,19 +20,19 @@ create table if not exists public.song_events(
 alter table public.song_events enable row level security;
 
 create or replace function public.is_super_admin() returns boolean language sql stable security definer set search_path=public as $$
- select exists(select 1 from profiles where id=auth.uid() and role='super_admin' and is_active)
+ select exists(select 1 from profiles where id::text=auth.uid()::text and role='super_admin' and is_active)
 $$;
 create or replace function public.is_staff() returns boolean language sql stable security definer set search_path=public as $$
- select exists(select 1 from profiles where id=auth.uid() and role in ('super_admin','editor') and is_active)
+ select exists(select 1 from profiles where id::text=auth.uid()::text and role in ('super_admin','editor') and is_active)
 $$;
 create or replace function public.can_add_song() returns boolean language sql stable security definer set search_path=public as $$
- select public.is_super_admin() or exists(select 1 from profiles p where p.id=auth.uid() and p.role='editor' and p.is_active and (select count(*) from songs s where s.owner_id=auth.uid()) < p.song_quota)
+ select public.is_super_admin() or exists(select 1 from profiles p where p.id::text=auth.uid()::text and p.role='editor' and p.is_active and (select count(*) from songs s where s.owner_id::text=auth.uid()::text) < p.song_quota)
 $$;
 
 drop policy if exists "admin inserts songs" on songs; drop policy if exists "admin updates songs" on songs; drop policy if exists "admin deletes songs" on songs;
-create policy "staff inserts owned songs" on songs for insert with check(public.can_add_song() and (public.is_super_admin() or owner_id=auth.uid()));
-create policy "staff updates allowed songs" on songs for update using(public.is_super_admin() or owner_id=auth.uid()) with check(public.is_super_admin() or owner_id=auth.uid());
-create policy "staff deletes allowed songs" on songs for delete using(public.is_super_admin() or owner_id=auth.uid());
+create policy "staff inserts owned songs" on songs for insert with check(public.can_add_song() and (public.is_super_admin() or owner_id::text=auth.uid()::text));
+create policy "staff updates allowed songs" on songs for update using(public.is_super_admin() or owner_id::text=auth.uid()::text) with check(public.is_super_admin() or owner_id::text=auth.uid()::text);
+create policy "staff deletes allowed songs" on songs for delete using(public.is_super_admin() or owner_id::text=auth.uid()::text);
 
 drop policy if exists "user reads own profile" on profiles;
 drop policy if exists "staff reads profiles" on profiles;
@@ -40,7 +40,7 @@ drop policy if exists "owner inserts profiles" on profiles;
 drop policy if exists "owner updates profiles" on profiles;
 drop policy if exists "public adds events" on song_events;
 drop policy if exists "staff reads events" on song_events;
-create policy "staff reads profiles" on profiles for select using(id=auth.uid() or public.is_super_admin());
+create policy "staff reads profiles" on profiles for select using(id::text=auth.uid()::text or public.is_super_admin());
 create policy "owner inserts profiles" on profiles for insert with check(public.is_super_admin());
 create policy "owner updates profiles" on profiles for update using(public.is_super_admin()) with check(public.is_super_admin());
 create policy "public adds events" on song_events for insert with check(true);
@@ -62,12 +62,12 @@ language plpgsql security definer set search_path=public as $$
 begin
   if auth.uid() is null or length(coalesce(p_token,'')) < 20 then return false; end if;
   update profiles set current_session_token=p_token,last_login_at=now()
-  where id=auth.uid() and role in ('super_admin','editor') and is_active;
+  where id::text=auth.uid()::text and role in ('super_admin','editor') and is_active;
   return found;
 end $$;
 create or replace function public.release_admin_session(p_token text) returns void
 language sql security definer set search_path=public as $$
-  update profiles set current_session_token=null where id=auth.uid() and current_session_token=p_token
+  update profiles set current_session_token=null where id::text=auth.uid()::text and current_session_token=p_token
 $$;
 grant execute on function public.claim_admin_session(text) to authenticated;
 grant execute on function public.release_admin_session(text) to authenticated;
