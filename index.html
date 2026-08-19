@@ -275,7 +275,9 @@
             { id: 11, title: "2018 DISSTRACK", artist: "kELEr", cover: "https://i.pinimg.com/736x/c1/bd/e1/c1bde111205e8fe31c383900bf394600.jpg", url: "music/2018 RAP SONG ft. Froyonion _ Youtube Rewind Indonesia.mp3", duration: "2:37" },
             { id: 12, title: "No SMILE Zone", artist: "E Lim", cover: "https://i.pinimg.com/1200x/de/d0/18/ded01890b7b6a48090952c148e521979.jpg", url: "music/Eriko Lim - NO SMILE ZONE M. RO.mp3", duration: "3:05" },
             { id: 13, title: "SING OFF TT", artist: "mas reza", cover: "https://i.pinimg.com/736x/52/76/e5/5276e5323b7ca6f4f874492c8edf2643.jpg", url: "music/SING-OFF TIKTOK SONGS Part II You Broke Me First, De Yang Gatal Gatal Sa vs Mirriam Eka.mp3", duration: "4:25" },
-            { id: 14, title: "Dat $tickk Acoustic", artist: "Fap-Fap", cover: "https://i.pinimg.com/736x/9e/bd/f4/9ebdf493b10e54ec2650bb73650f606a.jpg", url: "music/Lirik lagu dat stick akustik cover skinnyfabs.mp3", duration: "2:02" }
+            { id: 14, title: "Dat $tickk Acoustic", artist: "Fap-Fap", cover: "https://i.pinimg.com/736x/9e/bd/f4/9ebdf493b10e54ec2650bb73650f606a.jpg", url: "music/Lirik lagu dat stick akustik cover skinnyfabs.mp3", duration: "2:02" },
+            { id: 15, title: "Cundoy Kena 2-Step", artist: "hypnotizingconcerto3086", cover: "favi.jpg", parts: ["music/cundoy.part01", "music/cundoy.part02", "music/cundoy.part03", "music/cundoy.part04"], duration: "1:55" },
+            { id: 16, title: "Kocu Pandai Besi", artist: "lightheadedcondenser863", cover: "favi.jpg", parts: ["music/kocu.part01", "music/kocu.part02", "music/kocu.part03", "music/kocu.part04", "music/kocu.part05"], duration: "2:37" }
         ];
 
         // ========== STATE ==========
@@ -507,14 +509,33 @@
         }
 
         // ========== PERBAIKAN AUTO-PLAY NEXT ==========
-        function loadSongById(songId, autoplay = isPlaying) {
+        const assembledSongUrls = new Map();
+        async function resolveSongUrl(song) {
+            if (song.url) return song.url;
+            if (assembledSongUrls.has(song.id)) return assembledSongUrls.get(song.id);
+            const responses = await Promise.all(song.parts.map(part => fetch(part)));
+            if (responses.some(response => !response.ok)) throw new Error('Bagian audio tidak lengkap');
+            const chunks = await Promise.all(responses.map(response => response.arrayBuffer()));
+            const objectUrl = URL.createObjectURL(new Blob(chunks, { type: 'audio/mpeg' }));
+            assembledSongUrls.set(song.id, objectUrl);
+            return objectUrl;
+        }
+
+        async function loadSongById(songId, autoplay = isPlaying) {
             const song = getSongById(songId);
             if (!song) return;
             showLoading();
             // Simpan niat memutar sebelum audio.pause() memicu event pause.
             const shouldAutoplay = Boolean(autoplay);
             audio.pause();
-            audio.src = song.url;
+            try {
+                audio.src = await resolveSongUrl(song);
+            } catch (error) {
+                hideLoading();
+                alert(`Gagal memuat ${song.title}`);
+                if (shouldAutoplay) nextSong(true);
+                return;
+            }
             audio.load();
             songTitle.textContent = song.title;
             songArtist.textContent = song.artist;
