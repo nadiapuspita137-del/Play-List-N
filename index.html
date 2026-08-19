@@ -600,10 +600,19 @@
         async function loadSongById(songId, autoplay = isPlaying) {
             const song = getSongById(songId);
             if (!song) return;
-            showLoading();
             // Simpan niat memutar sebelum audio.pause() memicu event pause.
             const shouldAutoplay = Boolean(autoplay);
+            const needsAssembly = Boolean(song.parts?.length && !assembledSongUrls.has(song.id));
+            if (needsAssembly) showLoading();
             audio.pause();
+            songTitle.textContent = song.title;
+            songArtist.textContent = song.artist;
+            coverArt.src = song.cover;
+            activeLyrics = parseLrc(song.lyrics_lrc || '');
+            updateLyrics();
+            progressFill.style.width = '0%';
+            currentTimeSpan.textContent = '0:00';
+            durationSpan.textContent = song.duration || '--:--';
             try {
                 audio.src = await resolveSongUrl(song);
             } catch (error) {
@@ -615,32 +624,23 @@
                 updatePlayButtonUI(false);
                 return;
             }
+            hideLoading();
+            audio.preload = 'metadata';
             audio.load();
-            songTitle.textContent = song.title;
-            songArtist.textContent = song.artist;
-            coverArt.src = song.cover;
-            activeLyrics = parseLrc(song.lyrics_lrc || '');
-            updateLyrics();
-            progressFill.style.width = '0%';
-            currentTimeSpan.textContent = '0:00';
-            
-            audio.onloadedmetadata = () => {
-                durationSpan.textContent = formatTime(audio.duration);
-                hideLoading();
-                // Auto-next membawa perintah putar eksplisit meski event pause
-                // dari lagu lama sudah sempat mengubah state isPlaying.
-                if (shouldAutoplay) {
-                    audio.play().then(() => {
-                        isPlaying = true;
-                        updatePlayButtonUI(true);
-                    }).catch(err => {
-                        console.log("Auto play error:", err);
-                        isPlaying = false;
-                        updatePlayButtonUI(false);
-                    });
-                } else {
+            if (shouldAutoplay) {
+                audio.play().then(() => {
+                    isPlaying = true;
+                    updatePlayButtonUI(true);
+                }).catch(err => {
+                    console.log('Streaming belum siap:', err);
+                    isPlaying = false;
                     updatePlayButtonUI(false);
-                }
+                });
+            } else {
+                updatePlayButtonUI(false);
+            }
+            audio.onloadedmetadata = () => {
+                if (Number.isFinite(audio.duration)) durationSpan.textContent = formatTime(audio.duration);
             };
             audio.onerror = () => { 
                 hideLoading(); 
