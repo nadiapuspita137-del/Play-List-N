@@ -349,6 +349,175 @@
           width: 100%;
         }
       }
+      .admin-layout {
+        min-height: 100vh;
+      }
+      body.admin-mode .shell {
+        max-width: none;
+        padding: 0;
+      }
+      .admin-sidebar {
+        position: fixed;
+        inset: 0 auto 0 0;
+        width: 260px;
+        z-index: 30;
+        display: flex;
+        flex-direction: column;
+        padding: 25px 18px;
+        background: rgba(9, 14, 12, 0.97);
+        border-right: 1px solid #26342f;
+        box-shadow: 20px 0 60px #0006;
+      }
+      .sidebar-brand {
+        padding: 4px 10px 25px;
+        border-bottom: 1px solid #22302b;
+      }
+      .sidebar-brand small {
+        display: block;
+        margin-top: 6px;
+        color: #70827a;
+        letter-spacing: 0.12em;
+      }
+      .admin-nav {
+        display: grid;
+        gap: 7px;
+        margin-top: 24px;
+      }
+      .nav-item {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        width: 100%;
+        padding: 13px 14px;
+        border: 1px solid transparent;
+        border-radius: 13px;
+        color: #9aaca4;
+        background: transparent;
+        cursor: pointer;
+        text-align: left;
+        font-weight: 800;
+        transition: 0.2s;
+      }
+      .nav-item:hover {
+        color: #fff;
+        background: #14201d;
+      }
+      .nav-item.active {
+        color: #07150f;
+        background: linear-gradient(135deg, #00ec84, #61ffc1);
+        box-shadow: 0 10px 28px #00dc7c25;
+      }
+      .nav-icon {
+        width: 22px;
+        text-align: center;
+        font-size: 17px;
+      }
+      .sidebar-bottom {
+        margin-top: auto;
+        display: grid;
+        gap: 9px;
+      }
+      .sidebar-bottom .btn {
+        width: 100%;
+      }
+      .admin-workspace {
+        margin-left: 260px;
+        padding: 28px;
+        min-width: 0;
+      }
+      .workspace-inner {
+        max-width: 1180px;
+        margin: auto;
+      }
+      .page-view {
+        display: none;
+        animation: pageIn 0.24s ease;
+      }
+      .page-view.active {
+        display: block;
+      }
+      @keyframes pageIn {
+        from {
+          opacity: 0;
+          transform: translateY(7px);
+        }
+      }
+      .welcome-card {
+        overflow: hidden;
+        position: relative;
+        min-height: 250px;
+        display: flex;
+        align-items: center;
+        padding: 44px;
+        margin-top: 12px;
+        background:
+          radial-gradient(circle at 88% 20%, #00dc7c2b, transparent 34%),
+          linear-gradient(135deg, #14221e, #090d0c);
+      }
+      .welcome-card:after {
+        content: "♫";
+        position: absolute;
+        right: 7%;
+        font-size: 170px;
+        font-weight: 900;
+        color: #00dc7c10;
+        transform: rotate(-10deg);
+      }
+      .welcome-card h1 {
+        font-size: clamp(30px, 5vw, 55px);
+        margin: 0 0 10px;
+      }
+      .welcome-card p {
+        max-width: 590px;
+        font-size: 15px;
+      }
+      .quick-actions {
+        display: flex;
+        gap: 10px;
+        margin-top: 22px;
+        flex-wrap: wrap;
+      }
+      .mobile-menu,
+      .sidebar-overlay {
+        display: none;
+      }
+      @media (max-width: 900px) {
+        .admin-sidebar {
+          transform: translateX(-105%);
+          transition: 0.25s;
+        }
+        .admin-layout.menu-open .admin-sidebar {
+          transform: translateX(0);
+        }
+        .admin-workspace {
+          margin-left: 0;
+          padding: 76px 14px 30px;
+        }
+        .mobile-menu {
+          display: block;
+          position: fixed;
+          z-index: 25;
+          top: 15px;
+          left: 15px;
+        }
+        .admin-layout.menu-open .sidebar-overlay {
+          display: block;
+          position: fixed;
+          inset: 0;
+          z-index: 20;
+          background: #000a;
+          backdrop-filter: blur(3px);
+        }
+        .welcome-card {
+          padding: 27px 21px;
+          min-height: 285px;
+        }
+        .welcome-card:after {
+          font-size: 100px;
+          right: -8px;
+          bottom: -22px;
+        }
+      }
     </style>
     <style>
       .stat-summary {
@@ -556,202 +725,280 @@
         </form>
         <div id="loginMsg" class="notice hidden"></div>
       </section>
-      <section id="adminView" class="hidden">
-        <header class="top">
-          <div>
-            <div
-              class="muted"
-              style="color: #00dc7c; font-weight: 900; letter-spacing: 0.18em"
-            >
-              PLAY LIST NGAWI
-            </div>
-            <div class="logo">Music Control Center</div>
-            <div class="muted" id="adminEmail"></div>
+      <section id="adminView" class="admin-layout hidden">
+        <button id="mobileMenu" class="btn ghost mobile-menu">☰ Menu</button>
+        <div id="sidebarOverlay" class="sidebar-overlay"></div>
+        <aside class="admin-sidebar">
+          <div class="sidebar-brand">
+            <div class="logo" style="font-size: 25px">PLAY LIST N</div>
+            <small>ADMIN CONSOLE</small>
           </div>
-          <div class="actions">
+          <nav class="admin-nav">
+            <button class="nav-item active" data-page="dashboard">
+              <span class="nav-icon">⌂</span>Beranda
+            </button>
+            <button class="nav-item" data-page="statistics">
+              <span class="nav-icon">▥</span>Statistik
+            </button>
+            <button class="nav-item" data-page="song-form">
+              <span class="nav-icon">＋</span>Tambah Lagu
+            </button>
+            <button class="nav-item" data-page="songs">
+              <span class="nav-icon">♫</span>Daftar Lagu
+            </button>
+            <button id="navAdmins" class="nav-item hidden" data-page="admins">
+              <span class="nav-icon">♙</span>Kelola Admin
+            </button>
+          </nav>
+          <div class="sidebar-bottom">
             <a href="index.html"
-              ><button class="btn ghost">↗ Lihat website</button></a
+              ><button class="btn ghost">↗ Lihat Website</button></a
             ><button id="logoutBtn" class="btn danger">Keluar</button>
           </div>
-        </header>
-        <div class="stats">
-          <span class="pill" id="totalStat">0 lagu</span
-          ><span class="pill" id="activeStat">0 aktif</span
-          ><button id="migrateAudioBtn" class="btn primary">
-            ⚡ Optimalkan audio lama
-          </button>
-        </div>
-        <div id="migrationMsg" class="notice hidden"></div>
-        <section id="ownerTools" class="card hidden" style="margin-top: 16px">
-          <div class="top">
-            <div>
-              <h2>Kelola Admin</h2>
-              <p class="muted">
-                Buat akun terbatas dan tentukan jumlah lagu yang boleh
-                ditambahkan.
-              </p>
-            </div>
-          </div>
-          <form id="adminForm" class="grid">
-            <label class="field"
-              >Nama admin<input id="newAdminName" required /></label
-            ><label class="field"
-              >Email<input id="newAdminEmail" type="email" required /></label
-            ><label class="field"
-              >Password awal<input
-                id="newAdminPassword"
-                type="password"
-                minlength="8"
-                required /></label
-            ><label class="field"
-              >Kuota lagu<input
-                id="newAdminQuota"
-                type="number"
-                min="0"
-                value="10"
-                required /></label
-            ><button class="btn primary wide">Buat Admin Terbatas</button>
-          </form>
-          <div id="adminMsg" class="notice hidden"></div>
-          <div id="adminList" style="margin-top: 14px"></div>
-        </section>
-        <section class="card" style="margin-top: 16px">
-          <div class="top">
-            <div>
-              <h2>Statistik Musik</h2>
-              <p class="muted">
-                Performa koleksi berdasarkan pemutaran dan download.
-              </p>
-            </div>
-            <button id="statsRefresh" class="btn ghost">↻ Perbarui</button>
-          </div>
-          <div id="statsSummary" class="stat-summary"></div>
-          <div class="search-box">
-            <input
-              id="statsSearch"
-              type="search"
-              placeholder="Cari judul, artis, atau album…"
-              autocomplete="off"
-            />
-          </div>
-          <div id="statsSearchCount" class="muted search-count"></div>
-          <div id="statsList" class="stats-table"></div>
-        </section>
-        <section class="card" style="margin-top: 16px">
-          <h2 id="formTitle">Tambah Lagu</h2>
-          <div class="draft-bar">
-            <div>
-              <b>Draft Lagu</b>
-              <div id="draftState" class="draft-state">Belum ada perubahan</div>
-            </div>
-            <button type="button" id="discardDraft" class="btn danger">
-              Hapus Draft
-            </button>
-          </div>
-          <form id="songForm" class="grid">
-            <input id="songId" type="hidden" />
-            <label class="field">Judul<input id="title" required /></label
-            ><label class="field">Artis<input id="artist" required /></label
-            ><label class="field">Album<input id="album" /></label
-            ><label class="field">Genre<input id="genre" /></label
-            ><label class="field"
-              >Tahun<input
-                id="year"
-                type="number"
-                min="1900"
-                max="2100" /></label
-            ><label class="field"
-              >Urutan<input id="sortOrder" type="number" min="0" value="0"
-            /></label>
-            <label class="field"
-              >File MP3<input
-                id="audioFile"
-                type="file"
-                accept="audio/mpeg,audio/mp3" /></label
-            ><label class="field"
-              >Cover album<input id="coverFile" type="file" accept="image/*"
-            /></label>
-            <label class="field wide"
-              >Lirik berjalan (format LRC)<textarea
-                id="lyrics"
-                rows="9"
-                placeholder="[00:12.50]Baris pertama lirik&#10;[00:18.20]Baris berikutnya"
-              ></textarea>
-            </label>
-            <div class="wide card" style="padding: 14px">
-              <b>Editor Lirik Visual</b>
-              <p class="muted">
-                Putar audio, tulis satu baris, lalu tekan tombol timestamp.
-              </p>
-              <audio
-                id="lyricAudio"
-                controls
-                style="width: 100%; margin: 10px 0"
-              ></audio>
-              <div class="actions">
-                <input
-                  id="lyricLine"
-                  placeholder="Tulis satu baris lirik"
+        </aside>
+        <div class="admin-workspace">
+          <div class="workspace-inner">
+            <header class="top">
+              <div>
+                <div
+                  class="muted"
                   style="
-                    flex: 1;
-                    background: #080c0b;
-                    border: 1px solid #2a3b35;
-                    color: #fff;
-                    border-radius: 12px;
-                    padding: 11px;
+                    color: #00dc7c;
+                    font-weight: 900;
+                    letter-spacing: 0.18em;
                   "
-                /><button type="button" id="stampLyric" class="btn primary">
-                  + Waktu Sekarang
+                >
+                  PLAY LIST NGAWI
+                </div>
+                <div class="logo">Music Control Center</div>
+                <div class="muted" id="adminEmail"></div>
+              </div>
+              <div class="muted" id="pageLabel">BERANDA</div>
+            </header>
+            <section class="page-view active" data-view="dashboard">
+              <div class="card welcome-card">
+                <div>
+                  <div
+                    class="muted"
+                    style="
+                      color: #00dc7c;
+                      font-weight: 900;
+                      letter-spacing: 0.16em;
+                    "
+                  >
+                    SELAMAT DATANG KEMBALI
+                  </div>
+                  <h1>Hai, <span id="welcomeName">Owner</span> 👋</h1>
+                  <p class="muted">
+                    Semua musikmu ada dalam satu tempat. Kelola lagu, pantau
+                    statistik pemutaran, dan atur tim admin dengan lebih cepat.
+                  </p>
+                  <div class="quick-actions">
+                    <button class="btn primary" data-go="song-form">
+                      ＋ Tambah Lagu</button
+                    ><button class="btn ghost" data-go="songs">
+                      Lihat Daftar Lagu
+                    </button>
+                  </div>
+                </div>
+              </div>
+              <div class="stats">
+                <span class="pill" id="totalStat">0 lagu</span
+                ><span class="pill" id="activeStat">0 aktif</span
+                ><button id="migrateAudioBtn" class="btn primary">
+                  ⚡ Optimalkan audio lama
                 </button>
               </div>
-            </div>
-            <label class="publish-control wide">
-              <input id="isActive" type="checkbox" disabled />
-              <span class="publish-switch"></span>
-              <span class="publish-copy">
-                <b id="publishTitle">Publikasikan langsung</b>
-                <small id="publishHelp"
-                  >Lagu akan tampil di website setelah disimpan.</small
-                >
-              </span>
-            </label>
-            <div class="wide actions">
-              <button class="btn primary" id="saveBtn">Simpan Lagu</button
-              ><button type="button" id="cancelEdit" class="btn ghost hidden">
-                Batal Edit
-              </button>
-            </div>
-          </form>
-          <div class="bar"><i id="progress"></i></div>
-          <div id="formMsg" class="notice hidden"></div>
-          <details style="margin-top: 12px">
-            <summary>Contoh format lirik berjalan</summary>
-            <div class="lyrics-help">
-              [00:05.00]Musik mulai diputar [00:12.40]Lirik pertama tampil
-              [00:18.75]Lirik selanjutnya tampil Angka pertama = menit, kedua =
-              detik.
-            </div>
-          </details>
-        </section>
-        <section class="card" style="margin-top: 16px">
-          <div class="top">
-            <h2>Daftar Lagu</h2>
-            <button id="refreshBtn" class="btn ghost">Muat ulang</button>
+              <div id="migrationMsg" class="notice hidden"></div>
+            </section>
+            <section
+              id="ownerTools"
+              class="card page-view hidden"
+              data-view="admins"
+            >
+              <div class="top">
+                <div>
+                  <h2>Kelola Admin</h2>
+                  <p class="muted">
+                    Buat akun terbatas dan tentukan jumlah lagu yang boleh
+                    ditambahkan.
+                  </p>
+                </div>
+              </div>
+              <form id="adminForm" class="grid">
+                <label class="field"
+                  >Nama admin<input id="newAdminName" required /></label
+                ><label class="field"
+                  >Email<input
+                    id="newAdminEmail"
+                    type="email"
+                    required /></label
+                ><label class="field"
+                  >Password awal<input
+                    id="newAdminPassword"
+                    type="password"
+                    minlength="8"
+                    required /></label
+                ><label class="field"
+                  >Kuota lagu<input
+                    id="newAdminQuota"
+                    type="number"
+                    min="0"
+                    value="10"
+                    required /></label
+                ><button class="btn primary wide">Buat Admin Terbatas</button>
+              </form>
+              <div id="adminMsg" class="notice hidden"></div>
+              <div id="adminList" style="margin-top: 14px"></div>
+            </section>
+            <section class="card page-view" data-view="statistics">
+              <div class="top">
+                <div>
+                  <h2>Statistik Musik</h2>
+                  <p class="muted">
+                    Performa koleksi berdasarkan pemutaran dan download.
+                  </p>
+                </div>
+                <button id="statsRefresh" class="btn ghost">↻ Perbarui</button>
+              </div>
+              <div id="statsSummary" class="stat-summary"></div>
+              <div class="search-box">
+                <input
+                  id="statsSearch"
+                  type="search"
+                  placeholder="Cari judul, artis, atau album…"
+                  autocomplete="off"
+                />
+              </div>
+              <div id="statsSearchCount" class="muted search-count"></div>
+              <div id="statsList" class="stats-table"></div>
+            </section>
+            <section class="card page-view" data-view="song-form">
+              <h2 id="formTitle">Tambah Lagu</h2>
+              <div class="draft-bar">
+                <div>
+                  <b>Draft Lagu</b>
+                  <div id="draftState" class="draft-state">
+                    Belum ada perubahan
+                  </div>
+                </div>
+                <button type="button" id="discardDraft" class="btn danger">
+                  Hapus Draft
+                </button>
+              </div>
+              <form id="songForm" class="grid">
+                <input id="songId" type="hidden" />
+                <label class="field">Judul<input id="title" required /></label
+                ><label class="field">Artis<input id="artist" required /></label
+                ><label class="field">Album<input id="album" /></label
+                ><label class="field">Genre<input id="genre" /></label
+                ><label class="field"
+                  >Tahun<input
+                    id="year"
+                    type="number"
+                    min="1900"
+                    max="2100" /></label
+                ><label class="field"
+                  >Urutan<input id="sortOrder" type="number" min="0" value="0"
+                /></label>
+                <label class="field"
+                  >File MP3<input
+                    id="audioFile"
+                    type="file"
+                    accept="audio/mpeg,audio/mp3" /></label
+                ><label class="field"
+                  >Cover album<input
+                    id="coverFile"
+                    type="file"
+                    accept="image/*"
+                /></label>
+                <label class="field wide"
+                  >Lirik berjalan (format LRC)<textarea
+                    id="lyrics"
+                    rows="9"
+                    placeholder="[00:12.50]Baris pertama lirik&#10;[00:18.20]Baris berikutnya"
+                  ></textarea>
+                </label>
+                <div class="wide card" style="padding: 14px">
+                  <b>Editor Lirik Visual</b>
+                  <p class="muted">
+                    Putar audio, tulis satu baris, lalu tekan tombol timestamp.
+                  </p>
+                  <audio
+                    id="lyricAudio"
+                    controls
+                    style="width: 100%; margin: 10px 0"
+                  ></audio>
+                  <div class="actions">
+                    <input
+                      id="lyricLine"
+                      placeholder="Tulis satu baris lirik"
+                      style="
+                        flex: 1;
+                        background: #080c0b;
+                        border: 1px solid #2a3b35;
+                        color: #fff;
+                        border-radius: 12px;
+                        padding: 11px;
+                      "
+                    /><button type="button" id="stampLyric" class="btn primary">
+                      + Waktu Sekarang
+                    </button>
+                  </div>
+                </div>
+                <label class="publish-control wide">
+                  <input id="isActive" type="checkbox" disabled />
+                  <span class="publish-switch"></span>
+                  <span class="publish-copy">
+                    <b id="publishTitle">Publikasikan langsung</b>
+                    <small id="publishHelp"
+                      >Lagu akan tampil di website setelah disimpan.</small
+                    >
+                  </span>
+                </label>
+                <div class="wide actions">
+                  <button class="btn primary" id="saveBtn">Simpan Lagu</button
+                  ><button
+                    type="button"
+                    id="cancelEdit"
+                    class="btn ghost hidden"
+                  >
+                    Batal Edit
+                  </button>
+                </div>
+              </form>
+              <div class="bar"><i id="progress"></i></div>
+              <div id="formMsg" class="notice hidden"></div>
+              <details style="margin-top: 12px">
+                <summary>Contoh format lirik berjalan</summary>
+                <div class="lyrics-help">
+                  [00:05.00]Musik mulai diputar [00:12.40]Lirik pertama tampil
+                  [00:18.75]Lirik selanjutnya tampil Angka pertama = menit,
+                  kedua = detik.
+                </div>
+              </details>
+            </section>
+            <section class="card page-view" data-view="songs">
+              <div class="top">
+                <h2>Daftar Lagu</h2>
+                <button id="refreshBtn" class="btn ghost">Muat ulang</button>
+              </div>
+              <p class="muted">
+                Seret ikon ⋮⋮ untuk mengatur urutan. Urutan tersimpan otomatis.
+              </p>
+              <div class="search-box">
+                <input
+                  id="songSearch"
+                  type="search"
+                  placeholder="Cari judul, artis, album, status…"
+                  autocomplete="off"
+                />
+              </div>
+              <div id="songSearchCount" class="muted search-count"></div>
+              <div id="songList"></div>
+            </section>
           </div>
-          <p class="muted">
-            Seret ikon ⋮⋮ untuk mengatur urutan. Urutan tersimpan otomatis.
-          </p>
-          <div class="search-box">
-            <input
-              id="songSearch"
-              type="search"
-              placeholder="Cari judul, artis, album, status…"
-              autocomplete="off"
-            />
-          </div>
-          <div id="songSearchCount" class="muted search-count"></div>
-          <div id="songList"></div>
-        </section>
+        </div>
       </section>
     </main>
     <script>
@@ -846,17 +1093,59 @@
         }
       }
       function showLogin(text = "") {
+        document.body.classList.remove("admin-mode");
         $("loginView").classList.remove("hidden");
         $("adminView").classList.add("hidden");
         if (text) msg("loginMsg", text, true);
       }
+      const pageNames = {
+        dashboard: "BERANDA",
+        statistics: "STATISTIK MUSIK",
+        "song-form": "TAMBAH LAGU",
+        songs: "DAFTAR LAGU",
+        admins: "KELOLA ADMIN",
+      };
+      function openPage(page) {
+        document
+          .querySelectorAll(".page-view")
+          .forEach((view) =>
+            view.classList.toggle("active", view.dataset.view === page),
+          );
+        document
+          .querySelectorAll(".nav-item")
+          .forEach((item) =>
+            item.classList.toggle("active", item.dataset.page === page),
+          );
+        $("pageLabel").textContent = pageNames[page] || "PANEL ADMIN";
+        $("adminView").classList.remove("menu-open");
+        window.scrollTo({ top: 0, behavior: "smooth" });
+      }
+      document
+        .querySelectorAll("[data-page]")
+        .forEach((item) =>
+          item.addEventListener("click", () => openPage(item.dataset.page)),
+        );
+      document
+        .querySelectorAll("[data-go]")
+        .forEach((item) =>
+          item.addEventListener("click", () => openPage(item.dataset.go)),
+        );
+      $("mobileMenu").onclick = () =>
+        $("adminView").classList.toggle("menu-open");
+      $("sidebarOverlay").onclick = () =>
+        $("adminView").classList.remove("menu-open");
       async function showAdmin(user) {
+        document.body.classList.add("admin-mode");
         $("loginView").classList.add("hidden");
         $("adminView").classList.remove("hidden");
         $("adminEmail").textContent =
           `${currentProfile.display_name || user.email} • ${currentProfile.role === "super_admin" ? "OWNER" : `ADMIN • Kuota ${currentProfile.song_quota}`}`;
+        $("welcomeName").textContent =
+          currentProfile.display_name ||
+          (currentProfile.role === "super_admin" ? "Owner" : "Admin");
         if (currentProfile.role === "super_admin") {
           $("ownerTools").classList.remove("hidden");
+          $("navAdmins").classList.remove("hidden");
           loadAdmins();
         } else $("migrateAudioBtn").classList.add("hidden");
         await loadSongs();
@@ -1286,7 +1575,7 @@
         $("lyricAudio").src = s.audio_url || "";
         $("formTitle").textContent = "Edit Lagu";
         $("cancelEdit").classList.remove("hidden");
-        scrollTo({ top: 0, behavior: "smooth" });
+        openPage("song-form");
       };
       const draftFields = [
         "title",
