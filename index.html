@@ -8,6 +8,8 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;14..32,400;14..32,500;14..32,600;14..32,700;14..32,800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="supabase-config.js"></script>
     <style>
         /* ===== GAYA SAMA (tidak diubah) ===== */
         * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -97,6 +99,8 @@
         .download-song-btn { transition: all 0.2s; }
         .download-song-btn:hover { transform: translateY(-1px) scale(1.08); color: #ff1493 !important; }
         .download-song-btn:disabled { cursor: wait; opacity: .65; transform: none; }
+        .lyrics-live { min-height: 54px; display:grid; place-items:center; text-align:center; padding:10px; border-radius:14px; background:rgba(0,255,136,.06); color:#9ca3af; transition:.25s; }
+        .lyrics-live.has-line { color:#fff; border:1px solid rgba(0,255,136,.22); text-shadow:0 0 16px rgba(0,255,136,.35); }
 
         /* Penyempurnaan UX, responsif, dan aksesibilitas */
         button, input { -webkit-tap-highlight-color: transparent; }
@@ -181,6 +185,7 @@
                             <h2 id="songTitle" class="text-2xl md:text-3xl font-bold text-white song-title">Zombie Anthem</h2>
                             <p id="songArtist" class="text-gray-400 text-sm md:text-base">The Undead</p>
                         </div>
+                        <div id="lyricsLive" class="lyrics-live text-sm">Lirik akan tampil di sini</div>
                         <div class="space-y-2">
                             <div id="progressContainer" role="slider" tabindex="0" aria-label="Posisi lagu" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" aria-valuetext="0:00 dari 0:00">
                                 <div id="progressFill" class="progress-bar absolute left-0 bg-gradient-to-r from-green-500 to-red-500 rounded-full" style="width: 0%"></div>
@@ -264,7 +269,7 @@
 
     <script>
         // ========== DATA LAGU MASTER (LENGKAP DENGAN LAGU BARU) ==========
-        const masterSongs = [
+        let masterSongs = [
             { id: 1, title: "King Menang28", artist: "Ambatukamrudal", cover: "https://i.pinimg.com/736x/0d/bf/fa/0dbffaeac67524207c723ae96d8ce89b.jpg", url: "music/Menang28.mp3", duration: "2:12" },
             { id: 2, title: "Kenak ss Zopim", artist: "Gam Tempur", cover: "https://i.pinimg.com/736x/08/ca/28/08ca28713c45d2b6979051e78637477a.jpg", url: "music/Kenak ss Zopim.mp3", duration: "2:09" },
             { id: 3, title: "Cashback", artist: "Cukur Zembud", cover: "https://i.pinimg.com/1200x/e9/af/ad/e9afadbd9b42c53aecd4f6d918cb71c2.jpg", url: "music/CASHBACK.mp3", duration: "2:03" },
@@ -319,6 +324,8 @@
         const selectPlaylistModal = document.getElementById('selectPlaylistModal');
         const playlistListContainer = document.getElementById('playlistListContainer');
         const cancelSelectPlaylist = document.getElementById('cancelSelectPlaylist');
+        const lyricsLive = document.getElementById('lyricsLive');
+        let activeLyrics = [];
 
         // Helper functions
         function formatTime(seconds) {
@@ -330,6 +337,27 @@
         function showLoading() { loadingOverlay.classList.remove('opacity-0','pointer-events-none'); loadingOverlay.classList.add('opacity-100','pointer-events-auto'); }
         function hideLoading() { setTimeout(() => { loadingOverlay.classList.add('opacity-0','pointer-events-none'); loadingOverlay.classList.remove('opacity-100','pointer-events-auto'); }, 300); }
         function getSongById(id) { return masterSongs.find(s => s.id === id); }
+        function parseLrc(text='') {
+            return text.split(/\r?\n/).flatMap(line => {
+                const lyric = line.replace(/\[\d{1,2}:\d{2}(?:\.\d{1,3})?\]/g, '').trim();
+                return [...line.matchAll(/\[(\d{1,2}):(\d{2}(?:\.\d{1,3})?)\]/g)].map(m => ({ time: Number(m[1])*60+Number(m[2]), text: lyric }));
+            }).sort((a,b)=>a.time-b.time);
+        }
+        function updateLyrics() {
+            if (!activeLyrics.length) { lyricsLive.textContent='Lirik belum tersedia'; lyricsLive.classList.remove('has-line'); return; }
+            const line=[...activeLyrics].reverse().find(x=>x.time<=audio.currentTime+.12);
+            lyricsLive.textContent=line?.text||'♪'; lyricsLive.classList.toggle('has-line',Boolean(line?.text));
+        }
+        async function loadRemoteSongs() {
+            const cfg=window.SUPABASE_CONFIG;
+            if (!cfg?.url || !cfg?.publishableKey || !window.supabase) return;
+            try {
+                const client=supabase.createClient(cfg.url,cfg.publishableKey);
+                const {data,error}=await client.from('songs').select('*').eq('is_active',true).order('sort_order');
+                if (error) throw error;
+                if (data?.length) masterSongs=data.map((s,i)=>({id:s.id,title:s.title,artist:s.artist,album:s.album,cover:s.cover_url||'favi.jpg',url:s.audio_url,duration:s.duration_seconds?formatTime(s.duration_seconds):'--:--',lyrics_lrc:s.lyrics_lrc||'',sort_order:s.sort_order??i}));
+            } catch(error) { console.warn('Supabase belum siap, memakai koleksi lokal:',error.message); }
+        }
         function getCurrentDisplaySongs() {
             const playlist = playlists.find(p => p.id === currentPlaylistId);
             if (!playlist) return [];
@@ -584,6 +612,8 @@
             songTitle.textContent = song.title;
             songArtist.textContent = song.artist;
             coverArt.src = song.cover;
+            activeLyrics = parseLrc(song.lyrics_lrc || '');
+            updateLyrics();
             progressFill.style.width = '0%';
             currentTimeSpan.textContent = '0:00';
             
@@ -834,7 +864,7 @@
             else audio.currentTime = Math.min(audio.duration, Math.max(0, audio.currentTime + (e.key === 'ArrowRight' ? 5 : -5)));
             updateProgress();
         });
-        audio.addEventListener('timeupdate', updateProgress);
+        audio.addEventListener('timeupdate', () => { updateProgress(); updateLyrics(); });
         
         // ========== PERBAIKAN ENDED EVENT ==========
         audio.addEventListener('ended', () => {
@@ -899,19 +929,16 @@
             navigator.mediaSession.setActionHandler('previoustrack', prevSong);
         }
 
-        // Initialize
-        libraryCount.textContent = `${masterSongs.length} lagu`;
-        loadPlaylistsFromLocal();
-        renderPlaylistTabs();
-        refreshPlaylistView();
-        const firstSongs = getCurrentDisplaySongs();
-        if (firstSongs.length) {
-            currentPlayingSongId = firstSongs[0].id;
-            currentSongIndexInFiltered = 0;
-            loadSongById(currentPlayingSongId);
+        async function initializeApp() {
+            await loadRemoteSongs();
+            libraryCount.textContent = `${masterSongs.length} lagu`;
+            loadPlaylistsFromLocal();
+            renderPlaylistTabs(); refreshPlaylistView();
+            const firstSongs=getCurrentDisplaySongs();
+            if(firstSongs.length){currentPlayingSongId=firstSongs[0].id;currentSongIndexInFiltered=0;loadSongById(currentPlayingSongId)}
+            audio.volume=.7; updateMuteUI();
         }
-        audio.volume = 0.7;
-        updateMuteUI();
+        initializeApp();
     </script>
 </body>
 </html>
