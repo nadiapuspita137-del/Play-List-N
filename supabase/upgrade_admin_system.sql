@@ -12,11 +12,13 @@ alter table public.profiles add constraint profiles_role_check check(role in ('s
 
 create table if not exists public.song_events(
  id bigint generated always as identity primary key,
- song_id uuid references public.songs(id) on delete cascade,
+ song_id text,
  event_type text not null check(event_type in ('play','download')),
  session_id text,
  created_at timestamptz not null default now()
 );
+alter table public.song_events drop constraint if exists song_events_song_id_fkey;
+alter table public.song_events alter column song_id type text using song_id::text;
 alter table public.song_events enable row level security;
 
 create or replace function public.is_super_admin() returns boolean language sql stable security definer set search_path=public as $$
@@ -54,7 +56,7 @@ create policy "staff uploads own media" on storage.objects for insert with check
 create policy "staff updates own media" on storage.objects for update using(bucket_id in ('audio','covers') and (public.is_super_admin() or owner_id=auth.uid()::text));
 create policy "staff deletes own media" on storage.objects for delete using(bucket_id in ('audio','covers') and (public.is_super_admin() or owner_id=auth.uid()::text));
 
-create or replace view public.song_stats as select s.id,s.title,s.owner_id,count(*) filter(where e.event_type='play')::int plays,count(*) filter(where e.event_type='download')::int downloads from songs s left join song_events e on e.song_id=s.id group by s.id;
+create or replace view public.song_stats as select s.id,s.title,s.owner_id,count(*) filter(where e.event_type='play')::int plays,count(*) filter(where e.event_type='download')::int downloads from songs s left join song_events e on e.song_id=s.id::text group by s.id;
 grant select on public.song_stats to authenticated;
 
 create or replace function public.claim_admin_session(p_token text) returns boolean
