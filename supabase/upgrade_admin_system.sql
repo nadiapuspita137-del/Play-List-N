@@ -32,6 +32,9 @@ create or replace function public.can_add_song() returns boolean language sql st
 $$;
 
 drop policy if exists "admin inserts songs" on songs; drop policy if exists "admin updates songs" on songs; drop policy if exists "admin deletes songs" on songs;
+drop policy if exists "staff inserts owned songs" on songs;
+drop policy if exists "staff updates allowed songs" on songs;
+drop policy if exists "staff deletes allowed songs" on songs;
 create policy "staff inserts owned songs" on songs for insert with check(public.can_add_song() and (public.is_super_admin() or owner_id::text=auth.uid()::text));
 create policy "staff updates allowed songs" on songs for update using(public.is_super_admin() or owner_id::text=auth.uid()::text) with check(public.is_super_admin() or owner_id::text=auth.uid()::text);
 create policy "staff deletes allowed songs" on songs for delete using(public.is_super_admin() or owner_id::text=auth.uid()::text);
