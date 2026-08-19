@@ -2,7 +2,7 @@
   let db = null;
   let profile = null;
   let ready = false;
-  let songSortOrder = 'az';
+  let songSortOrder = 'none';
   const DEFAULTS = {
     view_dashboard: true,
     view_statistics: true,
@@ -54,17 +54,10 @@
 
   function applyAccess() {
     if (!ready || !profile || profile.role === 'super_admin') return;
-    const navMap = {
-      dashboard: 'view_dashboard',
-      statistics: 'view_statistics',
-      'song-form': 'add_song',
-      songs: 'view_songs',
-    };
+    const navMap = { dashboard: 'view_dashboard', statistics: 'view_statistics', 'song-form': 'add_song', songs: 'view_songs' };
     Object.entries(navMap).forEach(([page, permission]) => {
       document.querySelectorAll(`.nav-item[data-page="${page}"]`).forEach(el => el.classList.toggle('hidden', !permissionValue(permission)));
-      document.querySelectorAll(`.page-view[data-view="${page}"]`).forEach(el => {
-        if (!permissionValue(permission)) el.classList.remove('active');
-      });
+      document.querySelectorAll(`.page-view[data-view="${page}"]`).forEach(el => { if (!permissionValue(permission)) el.classList.remove('active'); });
     });
     if (!permissionValue('add_song')) document.querySelectorAll('[data-go="song-form"]').forEach(el => el.classList.add('hidden'));
     document.querySelectorAll('#migrateAudioBtn').forEach(el => el.classList.add('hidden'));
@@ -98,38 +91,20 @@
     const box = document.createElement('div');
     box.id = 'newAdminPermissions';
     box.className = 'permission-editor wide';
-    box.innerHTML = `<div class="permission-title"><b>Akses admin</b><small>Pilih menu dan kemampuan yang boleh digunakan admin ini.</small></div>
-      <div class="permission-grid">${Object.entries(LABELS).map(([key, [label, help]]) => `
-        <label class="permission-item"><input type="checkbox" data-new-permission="${key}" checked><span><b>${label}</b><small>${help}</small></span></label>`).join('')}</div>`;
+    box.innerHTML = `<div class="permission-title"><b>Akses admin</b><small>Pilih menu dan kemampuan yang boleh digunakan admin ini.</small></div><div class="permission-grid">${Object.entries(LABELS).map(([key, [label, help]]) => `<label class="permission-item"><input type="checkbox" data-new-permission="${key}" checked><span><b>${label}</b><small>${help}</small></span></label>`).join('')}</div>`;
     form.insertBefore(box, form.querySelector('button[type="submit"]') || form.lastElementChild);
-
     form.addEventListener('submit', async e => {
-      e.preventDefault();
-      e.stopImmediatePropagation();
+      e.preventDefault(); e.stopImmediatePropagation();
       if (!profile || profile.role !== 'super_admin') return;
-      const secondary = supabase.createClient(window.SUPABASE_CONFIG.url, window.SUPABASE_CONFIG.publishableKey, {
-        auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
-      });
+      const secondary = supabase.createClient(window.SUPABASE_CONFIG.url, window.SUPABASE_CONFIG.publishableKey, { auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false } });
       const permissions = {};
       Object.keys(LABELS).forEach(key => permissions[key] = !!form.querySelector(`[data-new-permission="${key}"]`)?.checked);
-      const { data, error } = await secondary.auth.signUp({
-        email: document.getElementById('newAdminEmail').value,
-        password: document.getElementById('newAdminPassword').value,
-      });
+      const { data, error } = await secondary.auth.signUp({ email: document.getElementById('newAdminEmail').value, password: document.getElementById('newAdminPassword').value });
       if (error || !data.user) return showAdminPermissionMsg(error?.message || 'Gagal membuat akun.', true);
-      const { error: profileError } = await db.from('profiles').insert({
-        id: data.user.id,
-        role: 'editor',
-        display_name: document.getElementById('newAdminName').value,
-        email: document.getElementById('newAdminEmail').value.trim().toLowerCase(),
-        song_quota: Number(document.getElementById('newAdminQuota').value),
-        is_active: true,
-        permissions,
-      });
+      const { error: profileError } = await db.from('profiles').insert({ id: data.user.id, role: 'editor', display_name: document.getElementById('newAdminName').value, email: document.getElementById('newAdminEmail').value.trim().toLowerCase(), song_quota: Number(document.getElementById('newAdminQuota').value), is_active: true, permissions });
       if (profileError) return showAdminPermissionMsg(profileError.message, true);
       showAdminPermissionMsg('Admin berhasil dibuat dengan akses yang dipilih.');
-      form.reset();
-      form.querySelectorAll('[data-new-permission]').forEach(x => x.checked = true);
+      form.reset(); form.querySelectorAll('[data-new-permission]').forEach(x => x.checked = true);
       if (typeof window.loadAdmins === 'function') window.loadAdmins();
     }, true);
   }
@@ -137,17 +112,12 @@
   function showAdminPermissionMsg(text, bad = false) {
     const el = document.getElementById('adminMsg');
     if (!el) return;
-    el.textContent = text;
-    el.style.color = bad ? '#ff919b' : '#8fffc5';
-    el.classList.remove('hidden');
+    el.textContent = text; el.style.color = bad ? '#ff919b' : '#8fffc5'; el.classList.remove('hidden');
   }
 
   function observeAdminList() {
     const target = document.getElementById('adminList');
-    if (!target) {
-      setTimeout(observeAdminList, 500);
-      return;
-    }
+    if (!target) { setTimeout(observeAdminList, 500); return; }
     new MutationObserver(() => patchAdminRows()).observe(target, { childList: true, subtree: true });
     patchAdminRows();
   }
@@ -168,16 +138,11 @@
     const permissions = { ...DEFAULTS, ...(data?.permissions || {}) };
     const box = document.createElement('div');
     box.className = 'permission-editor permission-row-editor';
-    box.innerHTML = `<div class="permission-title"><b>Hak akses</b><small>Owner bisa mengubah akses kapan saja.</small></div>
-      <div class="permission-grid">${Object.entries(LABELS).map(([key, [label, help]]) => `
-        <label class="permission-item"><input type="checkbox" data-permission="${key}" ${permissions[key] ? 'checked' : ''}><span><b>${label}</b><small>${help}</small></span></label>`).join('')}</div>
-      <button type="button" class="btn primary permission-save">Simpan Akses</button>`;
+    box.innerHTML = `<div class="permission-title"><b>Hak akses</b><small>Owner bisa mengubah akses kapan saja.</small></div><div class="permission-grid">${Object.entries(LABELS).map(([key, [label, help]]) => `<label class="permission-item"><input type="checkbox" data-permission="${key}" ${permissions[key] ? 'checked' : ''}><span><b>${label}</b><small>${help}</small></span></label>`).join('')}</div><button type="button" class="btn primary permission-save">Simpan Akses</button>`;
     row.appendChild(box);
     box.querySelector('.permission-save').onclick = async () => {
-      const next = {};
-      Object.keys(LABELS).forEach(key => next[key] = !!box.querySelector(`[data-permission="${key}"]`)?.checked);
-      const button = box.querySelector('.permission-save');
-      button.disabled = true;
+      const next = {}; Object.keys(LABELS).forEach(key => next[key] = !!box.querySelector(`[data-permission="${key}"]`)?.checked);
+      const button = box.querySelector('.permission-save'); button.disabled = true;
       const { error } = await db.from('profiles').update({ permissions: next }).eq('id', id);
       button.disabled = false;
       if (error) return showAdminPermissionMsg(`Gagal menyimpan akses: ${error.message}`, true);
@@ -195,8 +160,6 @@
     });
   }
 
-  // Song sorting is deliberately event-driven. No MutationObserver watches #songList,
-  // so moving rows cannot trigger another sort cycle or lock up the admin panel.
   function getSongTitle(row) {
     const clone = row.cloneNode(true);
     clone.querySelectorAll('.actions, button, input, textarea, select, img').forEach(el => el.remove());
@@ -221,19 +184,17 @@
     const list = document.getElementById('songList');
     if (!list || document.getElementById('songSortFilter')) return false;
     const wrapper = document.createElement('div');
-    wrapper.id = 'songSortFilter';
-    wrapper.className = 'song-filter-bar';
-    wrapper.innerHTML = `
-      <span class="song-filter-label">Urutkan lagu</span>
-      <button type="button" class="btn ghost song-sort-btn active" data-sort="az">A-Z</button>
-      <button type="button" class="btn ghost song-sort-btn" data-sort="za">Z-A</button>`;
+    wrapper.id = 'songSortFilter'; wrapper.className = 'song-filter-bar';
+    wrapper.innerHTML = `<span class="song-filter-label">Urutkan lagu</span><button type="button" class="btn ghost song-sort-btn active" data-sort="none">Tanpa filter</button><button type="button" class="btn ghost song-sort-btn" data-sort="az">A-Z</button><button type="button" class="btn ghost song-sort-btn" data-sort="za">Z-A</button>`;
     list.parentNode.insertBefore(wrapper, list);
     wrapper.addEventListener('click', e => {
       const button = e.target.closest('.song-sort-btn');
       if (!button) return;
-      songSortOrder = button.dataset.sort === 'za' ? 'za' : 'az';
+      songSortOrder = button.dataset.sort;
       wrapper.querySelectorAll('.song-sort-btn').forEach(btn => btn.classList.toggle('active', btn === button));
-      sortSongs(songSortOrder);
+      if (songSortOrder === 'az' || songSortOrder === 'za') sortSongs(songSortOrder);
+      // 'Tanpa filter' deliberately does not reshuffle or reload data.
+      // It simply stops applying a sort. New data will appear in its normal load order.
     });
     return true;
   }
@@ -244,21 +205,7 @@
   }
 
   const style = document.createElement('style');
-  style.textContent = `
-    .permission-editor{margin-top:12px;padding:14px;border:1px solid #294039;border-radius:15px;background:#0a1210}
-    .permission-title{display:flex;flex-direction:column;gap:3px;margin-bottom:11px}
-    .permission-title small,.permission-item small{color:#82928c;font-size:11px;font-weight:500}
-    .permission-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
-    .permission-item{display:flex;align-items:flex-start;gap:9px;padding:10px;border:1px solid #263a34;border-radius:11px;background:#0d1714;cursor:pointer}
-    .permission-item input{margin-top:3px;accent-color:#00dc7c}
-    .permission-item span{display:grid;gap:3px}
-    .permission-save{margin-top:10px}
-    .song-filter-bar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:0 0 12px;padding:10px 12px;border:1px solid #263a34;border-radius:13px;background:#0b1311}
-    .song-filter-label{color:#91a29b;font-size:12px;font-weight:750;margin-right:2px}
-    .song-filter-bar .song-sort-btn{padding:8px 13px;font-size:12px}
-    .song-filter-bar .song-sort-btn.active{background:linear-gradient(135deg,#00ec84,#00b968);color:#03130b;border-color:transparent}
-    @media(max-width:760px){.permission-grid{grid-template-columns:1fr}.song-filter-bar{width:100%}.song-filter-bar .song-sort-btn{flex:1}}
-  `;
+  style.textContent = `.permission-editor{margin-top:12px;padding:14px;border:1px solid #294039;border-radius:15px;background:#0a1210}.permission-title{display:flex;flex-direction:column;gap:3px;margin-bottom:11px}.permission-title small,.permission-item small{color:#82928c;font-size:11px;font-weight:500}.permission-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.permission-item{display:flex;align-items:flex-start;gap:9px;padding:10px;border:1px solid #263a34;border-radius:11px;background:#0d1714;cursor:pointer}.permission-item input{margin-top:3px;accent-color:#00dc7c}.permission-item span{display:grid;gap:3px}.permission-save{margin-top:10px}.song-filter-bar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:0 0 12px;padding:10px 12px;border:1px solid #263a34;border-radius:13px;background:#0b1311}.song-filter-label{color:#91a29b;font-size:12px;font-weight:750;margin-right:2px}.song-filter-bar .song-sort-btn{padding:8px 13px;font-size:12px}.song-filter-bar .song-sort-btn.active{background:linear-gradient(135deg,#00ec84,#00b968);color:#03130b;border-color:transparent}@media(max-width:760px){.permission-grid{grid-template-columns:1fr}.song-filter-bar{width:100%}.song-filter-bar .song-sort-btn{flex:1}}`;
   document.head.appendChild(style);
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
