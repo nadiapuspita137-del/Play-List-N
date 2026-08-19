@@ -473,6 +473,10 @@
       .publish-control input:checked + .publish-switch:after {
         left: 24px;
       }
+      .publish-control input:disabled + .publish-switch {
+        opacity: 0.4;
+        cursor: not-allowed;
+      }
       .publish-copy b {
         display: block;
       }
@@ -663,7 +667,7 @@
               </div>
             </div>
             <label class="publish-control wide">
-              <input id="isActive" type="checkbox" checked />
+              <input id="isActive" type="checkbox" disabled />
               <span class="publish-switch"></span>
               <span class="publish-copy">
                 <b id="publishTitle">Publikasikan langsung</b>
@@ -1057,7 +1061,10 @@
               const allowed =
                 currentProfile.role === "super_admin" ||
                 s.owner_id === currentUser.id;
-              return `<div class="song ${s.is_active ? "" : "inactive"}" draggable="${allowed}" data-id="${s.id}"><span class="drag">⋮⋮</span><img src="${s.cover_url || "favi.jpg"}"><div><b>${esc(s.title)}</b><div class="muted">${esc(s.artist)}${s.album ? " • " + esc(s.album) : ""} • <span style="color:${s.is_active ? "#00dc7c" : "#ffb454"}">${s.is_active ? "PUBLIK" : "DRAFT"}</span>${allowed ? "" : " • Dilindungi"}</div></div><div class="actions">${allowed ? `<button class="btn ghost" onclick="editSong('${s.id}')">Edit</button><button class="btn ghost" onclick="toggleSong('${s.id}',${!s.is_active})">${s.is_active ? "Jadikan Draft" : "Publikasikan"}</button><button class="btn danger" onclick="deleteSong('${s.id}')">Hapus</button>` : '<span class="pill">🔒 Milik Owner</span>'}</div></div>`;
+              const hasAudio = Boolean(
+                (s.audio_url || "").trim() || s.audio_parts?.length,
+              );
+              return `<div class="song ${s.is_active ? "" : "inactive"}" draggable="${allowed}" data-id="${s.id}"><span class="drag">⋮⋮</span><img src="${s.cover_url || "favi.jpg"}"><div><b>${esc(s.title)}</b><div class="muted">${esc(s.artist)}${s.album ? " • " + esc(s.album) : ""} • <span style="color:${s.is_active ? "#00dc7c" : "#ffb454"}">${s.is_active ? "PUBLIK" : "DRAFT"}</span> • ${hasAudio ? "Audio siap" : "⚠ Audio belum ada"}${allowed ? "" : " • Dilindungi"}</div></div><div class="actions">${allowed ? `<button class="btn ghost" onclick="editSong('${s.id}')">Edit</button><button class="btn ghost" ${!s.is_active && !hasAudio ? "disabled title='Upload MP3 dahulu'" : ""} onclick="toggleSong('${s.id}',${!s.is_active})">${s.is_active ? "Jadikan Draft" : hasAudio ? "Publikasikan" : "Audio diperlukan"}</button><button class="btn danger" onclick="deleteSong('${s.id}')">Hapus</button>` : '<span class="pill">🔒 Milik Owner</span>'}</div></div>`;
             })
             .join("") || '<p class="muted">Belum ada lagu.</p>';
         enableDrag();
@@ -1190,6 +1197,9 @@
         $("sortOrder").value = s.sort_order;
         $("lyrics").value = s.lyrics_lrc || "";
         $("isActive").checked = s.is_active;
+        $("isActive").disabled =
+          !s.is_active &&
+          !Boolean((s.audio_url || "").trim() || s.audio_parts?.length);
         updatePublishCopy();
         $("lyricAudio").src = s.audio_url || "";
         $("formTitle").textContent = "Edit Lagu";
@@ -1208,6 +1218,12 @@
       ];
       function updatePublishCopy() {
         const active = $("isActive").checked;
+        if ($("isActive").disabled) {
+          $("publishTitle").textContent = "File MP3 diperlukan";
+          $("publishHelp").textContent =
+            "Pilih atau upload audio sebelum lagu dapat dipublikasikan.";
+          return;
+        }
         $("publishTitle").textContent = active
           ? "Publikasikan langsung"
           : "Simpan sebagai draft";
@@ -1242,6 +1258,9 @@
           $("draftState").textContent =
             "Draft lama berhasil dipulihkan • pilih ulang file MP3 jika perlu";
           $("draftState").classList.add("saved");
+          $("isActive").checked = false;
+          $("isActive").disabled = true;
+          updatePublishCopy();
         } catch (e) {
           localStorage.removeItem(draftKey());
         }
@@ -1249,7 +1268,8 @@
       function resetForm(clearDraft = true) {
         $("songForm").reset();
         $("songId").value = "";
-        $("isActive").checked = true;
+        $("isActive").checked = false;
+        $("isActive").disabled = true;
         updatePublishCopy();
         $("lyricAudio").removeAttribute("src");
         $("formTitle").textContent = "Tambah Lagu";
@@ -1269,8 +1289,12 @@
         msg("formMsg", "Draft berhasil dihapus.");
       };
       $("audioFile").onchange = (e) => {
-        if (e.target.files[0])
+        if (e.target.files[0]) {
           $("lyricAudio").src = URL.createObjectURL(e.target.files[0]);
+          $("isActive").disabled = false;
+          $("isActive").checked = true;
+          updatePublishCopy();
+        }
       };
       $("stampLyric").onclick = () => {
         const text = $("lyricLine").value.trim();
@@ -1283,6 +1307,12 @@
         $("lyricLine").value = "";
       };
       window.toggleSong = async (id, state) => {
+        const song = songs.find((x) => x.id === id);
+        if (
+          state &&
+          !((song?.audio_url || "").trim() || song?.audio_parts?.length)
+        )
+          return alert("Upload file MP3 dahulu sebelum lagu dipublikasikan.");
         const { error } = await db
           .from("songs")
           .update({ is_active: state })
