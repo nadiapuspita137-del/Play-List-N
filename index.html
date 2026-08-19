@@ -106,6 +106,7 @@
         .audio-status.ready { color:#00df7c; }
         .audio-status.error { color:#ff6872; }
         .audio-status .status-spinner { width:12px; height:12px; border:2px solid rgba(255,86,173,.25); border-top-color:#ff56ad; border-radius:50%; animation:spin .65s linear infinite; }
+        #waveformCanvas { width:100%; height:62px; display:block; border-radius:12px; background:rgba(255,255,255,.025); cursor:pointer; }
 
         /* Penyempurnaan UX, responsif, dan aksesibilitas */
         button, input { -webkit-tap-highlight-color: transparent; }
@@ -192,6 +193,7 @@
                         </div>
                         <div id="lyricsLive" class="lyrics-live text-sm">Lirik akan tampil di sini</div>
                         <div id="audioStatus" class="audio-status" role="status" aria-live="polite"><i class="fas fa-circle text-[6px]"></i><span>Siap memilih lagu</span></div>
+                        <canvas id="waveformCanvas" width="640" height="124" aria-label="Waveform lagu, klik untuk berpindah waktu"></canvas>
                         <div class="space-y-2">
                             <div id="progressContainer" role="slider" tabindex="0" aria-label="Posisi lagu" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" aria-valuetext="0:00 dari 0:00">
                                 <div id="progressFill" class="progress-bar absolute left-0 bg-gradient-to-r from-green-500 to-red-500 rounded-full" style="width: 0%"></div>
@@ -333,6 +335,10 @@
         const lyricsLive = document.getElementById('lyricsLive');
         const audioStatus = document.getElementById('audioStatus');
         let activeLyrics = [];
+        let supabaseClient = null, waveformSongId = null;
+        const waveformCanvas = document.getElementById('waveformCanvas'), waveCtx = waveformCanvas.getContext('2d');
+        const eventSession = localStorage.getItem('music_event_session') || crypto.randomUUID();
+        localStorage.setItem('music_event_session', eventSession);
 
         // Helper functions
         function formatTime(seconds) {
@@ -349,6 +355,9 @@
             const icon = state === 'loading' ? '<i class="status-spinner"></i>' : state === 'error' ? '<i class="fas fa-triangle-exclamation"></i>' : state === 'ready' ? '<i class="fas fa-wave-square"></i>' : '<i class="fas fa-circle text-[6px]"></i>';
             audioStatus.innerHTML = `${icon}<span>${text}</span>`;
         }
+        async function recordEvent(songId,eventType){if(!supabaseClient||typeof songId!=='string')return;try{await supabaseClient.from('song_events').insert({song_id:songId,event_type:eventType,session_id:eventSession})}catch(e){console.warn('Statistik:',e.message)}}
+        async function drawWaveform(song,url){waveformSongId=song.id;waveCtx.clearRect(0,0,640,124);waveCtx.fillStyle='#35423e';waveCtx.fillText('Memuat waveform…',16,65);try{const data=await (await fetch(url)).arrayBuffer(),ctx=new AudioContext(),decoded=await ctx.decodeAudioData(data),samples=decoded.getChannelData(0),bars=110,step=Math.floor(samples.length/bars);waveCtx.clearRect(0,0,640,124);for(let i=0;i<bars;i++){let peak=0;for(let j=0;j<step;j+=Math.max(1,Math.floor(step/80)))peak=Math.max(peak,Math.abs(samples[i*step+j]||0));const h=Math.max(4,peak*106),x=i*(640/bars);waveCtx.fillStyle='#00dc7c';waveCtx.fillRect(x,62-h/2,3.8,h)}ctx.close()}catch(e){waveCtx.clearRect(0,0,640,124)}}
+        waveformCanvas.addEventListener('click',e=>{if(!audio.duration)return;const r=waveformCanvas.getBoundingClientRect();audio.currentTime=((e.clientX-r.left)/r.width)*audio.duration});
         function parseLrc(text='') {
             return text.split(/\r?\n/).flatMap(line => {
                 const lyric = line.replace(/\[\d{1,2}:\d{2}(?:\.\d{1,3})?\]/g, '').trim();
@@ -368,8 +377,8 @@
             const cfg=window.SUPABASE_CONFIG;
             if (!cfg?.url || !cfg?.publishableKey || !window.supabase) return;
             try {
-                const client=supabase.createClient(cfg.url,cfg.publishableKey);
-                const {data,error}=await client.from('songs').select('*').eq('is_active',true).order('sort_order');
+                supabaseClient=supabase.createClient(cfg.url,cfg.publishableKey);
+                const {data,error}=await supabaseClient.from('songs').select('*').eq('is_active',true).order('sort_order');
                 if (error) throw error;
                 if (data?.length) masterSongs=data.map((s,i)=>({id:s.id,title:s.title,artist:s.artist,album:s.album,cover:normalizeMediaUrl(s.cover_url)||'favi.jpg',url:s.audio_parts?.length?null:normalizeMediaUrl(s.audio_url),parts:s.audio_parts?.map(normalizeMediaUrl)||null,duration:s.duration_seconds?formatTime(s.duration_seconds):'--:--',lyrics_lrc:s.lyrics_lrc||'',sort_order:s.sort_order??i}));
             } catch(error) { console.warn('Supabase belum siap, memakai koleksi lokal:',error.message); }
@@ -594,6 +603,7 @@
                 link.download = `${song.title.replace(/[\\/:*?"<>|]/g, '-').trim()}.mp3`;
                 document.body.appendChild(link);
                 link.click();
+                recordEvent(song.id,'download');
                 link.remove();
                 setTimeout(() => URL.revokeObjectURL(downloadUrl), 1500);
                 button.innerHTML = '<i class="fas fa-check text-green-500"></i>';
@@ -641,6 +651,7 @@
             hideLoading();
             audio.preload = 'metadata';
             audio.load();
+            drawWaveform(song,audio.src);
             if (shouldAutoplay) {
                 audio.play().then(() => {
                     isPlaying = true;
@@ -906,7 +917,8 @@
         audio.addEventListener('waiting', () => setAudioStatus('loading', 'Buffering…'));
         audio.addEventListener('stalled', () => setAudioStatus('loading', 'Koneksi audio melambat…'));
         audio.addEventListener('canplay', () => { if (!isPlaying) setAudioStatus('ready', 'Siap diputar'); });
-        audio.addEventListener('playing', () => setAudioStatus('ready', 'Sedang diputar'));
+        const playedThisSession=new Set();
+        audio.addEventListener('playing', () => {setAudioStatus('ready', 'Sedang diputar');if(currentPlayingSongId&&!playedThisSession.has(currentPlayingSongId)){playedThisSession.add(currentPlayingSongId);recordEvent(currentPlayingSongId,'play')}});
         audio.addEventListener('play', () => { isPlaying=true; updatePlayButtonUI(true); refreshPlaylistView(); });
         audio.addEventListener('pause', () => { isPlaying=false; updatePlayButtonUI(false); if(audio.currentTime>0&&!audio.ended)setAudioStatus('', 'Dijeda'); refreshPlaylistView(); });
         searchInput.addEventListener('input', () => { refreshPlaylistView(); });
