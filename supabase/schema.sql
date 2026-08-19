@@ -15,6 +15,7 @@ create table if not exists public.songs (
   genre text,
   year integer,
   audio_url text not null,
+  audio_parts jsonb,
   audio_path text,
   cover_url text,
   cover_path text,

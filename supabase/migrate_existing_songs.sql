@@ -1,0 +1,27 @@
+-- Jalankan sekali di Supabase SQL Editor untuk memindahkan 16 lagu lama.
+alter table public.songs add column if not exists audio_parts jsonb;
+
+insert into public.songs
+(id,title,artist,cover_url,audio_url,audio_parts,duration_seconds,sort_order,is_active)
+values
+('00000000-0000-4000-8000-000000000001','King Menang28','Ambatukamrudal','https://i.pinimg.com/736x/0d/bf/fa/0dbffaeac67524207c723ae96d8ce89b.jpg','https://nadiapuspita137-del.github.io/Play-List-N/music/Menang28.mp3',null,132,1,true),
+('00000000-0000-4000-8000-000000000002','Kenak ss Zopim','Gam Tempur','https://i.pinimg.com/736x/08/ca/28/08ca28713c45d2b6979051e78637477a.jpg','https://nadiapuspita137-del.github.io/Play-List-N/music/Kenak%20ss%20Zopim.mp3',null,129,2,true),
+('00000000-0000-4000-8000-000000000003','Cashback','Cukur Zembud','https://i.pinimg.com/1200x/e9/af/ad/e9afadbd9b42c53aecd4f6d918cb71c2.jpg','https://nadiapuspita137-del.github.io/Play-List-N/music/CASHBACK.mp3',null,123,3,true),
+('00000000-0000-4000-8000-000000000004','World War Rongawi','Rusdi Lipan','https://i.pinimg.com/736x/14/ed/c1/14edc144366391b0dcf5fcdc8cc002f2.jpg','https://nadiapuspita137-del.github.io/Play-List-N/music/WORLD%20WAR%20RONGAWI.mp3',null,309,4,true),
+('00000000-0000-4000-8000-000000000005','Ingin Hilang Ingatan - Live','Rocket Rockers','https://i.pinimg.com/736x/30/f7/eb/30f7ebf8fefe2394022baf4bbbccd97c.jpg','https://nadiapuspita137-del.github.io/Play-List-N/music/ingin%20hilang%20ingatan.mp3',null,304,5,true),
+('00000000-0000-4000-8000-000000000006','J KALCER','Mas Ambali','https://i.pinimg.com/736x/94/dd/17/94dd17300b4b6897d88071c4f42e0b80.jpg','https://nadiapuspita137-del.github.io/Play-List-N/music/JKOPLO.mp3',null,364,6,true),
+('00000000-0000-4000-8000-000000000007','SMVLL UPYSDP','TOL LANG MA DIA','https://i.pinimg.com/1200x/83/eb/99/83eb9988e90055bca7d68efe499762b3.jpg','https://nadiapuspita137-del.github.io/Play-List-N/music/SMVLL%20-%20Untuk%20Perempuan%20Yang%20Sedang%20Dalam%20Pelukan%20Payung%20Teduh%20Reggae%20Cover%20%C2%A4%20Cover%20By%20_%20SMVLL%20%C2%A4.mp3',null,257,7,true),
+('00000000-0000-4000-8000-000000000008','RATNA BAIK','SILIKON','https://i.pinimg.com/1200x/b3/47/5a/b3475affd489bfbed23ebec736042cfc.jpg','https://nadiapuspita137-del.github.io/Play-List-N/music/Lil%20Salmonela%20x%20Crygen%20-%20Ratna%20Anjink%20Diss%20Irfan%20Gapreh%20x%20Ratna%20Kosonkduasatu.mp3',null,186,8,true),
+('00000000-0000-4000-8000-000000000009','LAGU BERSIH','enkole','https://i.pinimg.com/736x/7b/90/f1/7b90f19fab5b5b45b7a34fe466b806f4.jpg','https://nadiapuspita137-del.github.io/Play-List-N/music/Lagu%20Jorok%20-%20Baon%20Cikadap%20Cleaned.mp3',null,225,9,true),
+('00000000-0000-4000-8000-000000000010','CD','TOL LANG MA DIA','https://i.pinimg.com/736x/b2/95/f2/b295f2446bd4583f9802a13363965a5c.jpg','https://nadiapuspita137-del.github.io/Play-List-N/music/CUMA%20DUNIA%20-%20SMVLL%20Cover%20Ikon%20-%20Love%20Scenario.mp3',null,265,10,true),
+('00000000-0000-4000-8000-000000000011','2018 DISSTRACK','kELEr','https://i.pinimg.com/736x/c1/bd/e1/c1bde111205e8fe31c383900bf394600.jpg','https://nadiapuspita137-del.github.io/Play-List-N/music/2018%20RAP%20SONG%20ft.%20Froyonion%20_%20Youtube%20Rewind%20Indonesia.mp3',null,157,11,true),
+('00000000-0000-4000-8000-000000000012','No SMILE Zone','E Lim','https://i.pinimg.com/1200x/de/d0/18/ded01890b7b6a48090952c148e521979.jpg','https://nadiapuspita137-del.github.io/Play-List-N/music/Eriko%20Lim%20-%20NO%20SMILE%20ZONE%20M.%20RO.mp3',null,185,12,true),
+('00000000-0000-4000-8000-000000000013','SING OFF TT','mas reza','https://i.pinimg.com/736x/52/76/e5/5276e5323b7ca6f4f874492c8edf2643.jpg','https://nadiapuspita137-del.github.io/Play-List-N/music/SING-OFF%20TIKTOK%20SONGS%20Part%20II%20You%20Broke%20Me%20First,%20De%20Yang%20Gatal%20Gatal%20Sa%20vs%20Mirriam%20Eka.mp3',null,265,13,true),
+('00000000-0000-4000-8000-000000000014','Dat $tickk Acoustic','Fap-Fap','https://i.pinimg.com/736x/9e/bd/f4/9ebdf493b10e54ec2650bb73650f606a.jpg','https://nadiapuspita137-del.github.io/Play-List-N/music/Lirik%20lagu%20dat%20stick%20akustik%20cover%20skinnyfabs.mp3',null,122,14,true),
+('00000000-0000-4000-8000-000000000015','Cundoy Kena 2-Step','hypnotizingconcerto3086','https://nadiapuspita137-del.github.io/Play-List-N/favi.jpg','',jsonb_build_array('https://nadiapuspita137-del.github.io/Play-List-N/music/cundoy.part01','https://nadiapuspita137-del.github.io/Play-List-N/music/cundoy.part02','https://nadiapuspita137-del.github.io/Play-List-N/music/cundoy.part03','https://nadiapuspita137-del.github.io/Play-List-N/music/cundoy.part04'),115,15,true),
+('00000000-0000-4000-8000-000000000016','Kocu Pandai Besi','lightheadedcondenser863','https://nadiapuspita137-del.github.io/Play-List-N/favi.jpg','',jsonb_build_array('https://nadiapuspita137-del.github.io/Play-List-N/music/kocu.part01','https://nadiapuspita137-del.github.io/Play-List-N/music/kocu.part02','https://nadiapuspita137-del.github.io/Play-List-N/music/kocu.part03','https://nadiapuspita137-del.github.io/Play-List-N/music/kocu.part04','https://nadiapuspita137-del.github.io/Play-List-N/music/kocu.part05'),157,16,true)
+on conflict (id) do update set
+ title=excluded.title, artist=excluded.artist, cover_url=excluded.cover_url,
+ audio_url=excluded.audio_url, audio_parts=excluded.audio_parts,
+ duration_seconds=excluded.duration_seconds, sort_order=excluded.sort_order,
+ is_active=excluded.is_active, updated_at=now();
