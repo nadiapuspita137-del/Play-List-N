@@ -667,7 +667,11 @@
                 updatePlayButtonUI(false);
             }
             audio.onloadedmetadata = () => {
-                if (Number.isFinite(audio.duration)) durationSpan.textContent = formatTime(audio.duration);
+                if (Number.isFinite(audio.duration)) {
+                    const measured=formatTime(audio.duration),current=getSongById(currentPlayingSongId);
+                    durationSpan.textContent=measured;
+                    if(current&&current.duration!==measured){current.duration=measured;refreshPlaylistView()}
+                }
                 if (!isPlaying) setAudioStatus('ready', 'Siap diputar');
             };
             audio.onerror = () => { 
