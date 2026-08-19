@@ -94,6 +94,9 @@
         .delete-playlist-btn:hover { opacity: 1; color: #ff4444; }
         .add-to-playlist-btn { transition: all 0.2s; }
         .add-to-playlist-btn:hover { transform: scale(1.1); color: #00ff88 !important; }
+        .download-song-btn { transition: all 0.2s; }
+        .download-song-btn:hover { transform: translateY(-1px) scale(1.08); color: #ff1493 !important; }
+        .download-song-btn:disabled { cursor: wait; opacity: .65; transform: none; }
 
         /* Penyempurnaan UX, responsif, dan aksesibilitas */
         button, input { -webkit-tap-highlight-color: transparent; }
@@ -449,13 +452,16 @@
                         <div class="text-gray-500 text-sm truncate">${song.artist}</div>
                     </div>
                     <div class="text-gray-600 text-sm">${song.duration}</div>
+                    <button class="download-song-btn text-gray-400 hover:text-pink-500 transition ml-1 w-8 h-8 rounded-full" data-song-id="${song.id}" title="Download ${song.title}" aria-label="Download ${song.title}">
+                        <i class="fas fa-download"></i>
+                    </button>
                     <button class="add-to-playlist-btn text-gray-400 hover:text-green-500 transition ml-2" data-song-id="${song.id}" title="Tambah ke playlist lain">
                         <i class="fas fa-plus-circle"></i>
                     </button>
                     ${isActive && isPlaying ? '<i class="fas fa-volume-up text-green-500 ml-2"></i>' : ''}
                 `;
                 item.addEventListener('click', (e) => {
-                    if (e.target.closest('.add-to-playlist-btn')) return;
+                    if (e.target.closest('.add-to-playlist-btn, .download-song-btn')) return;
                     if (currentPlayingSongId !== song.id) {
                         currentPlayingSongId = song.id;
                         currentSongIndexInFiltered = idx;
@@ -467,6 +473,11 @@
                 addBtn.addEventListener('click', (e) => {
                     e.stopPropagation();
                     showPlaylistSelectionModal(song.id);
+                });
+                const downloadBtn = item.querySelector('.download-song-btn');
+                downloadBtn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    downloadSong(song.id, downloadBtn);
                 });
                 playlistContainer.appendChild(item);
             });
@@ -519,6 +530,39 @@
             const objectUrl = URL.createObjectURL(new Blob(chunks, { type: 'audio/mpeg' }));
             assembledSongUrls.set(song.id, objectUrl);
             return objectUrl;
+        }
+
+        async function downloadSong(songId, button) {
+            const song = getSongById(songId);
+            if (!song || button.disabled) return;
+            const originalIcon = button.innerHTML;
+            button.disabled = true;
+            button.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+            button.setAttribute('aria-label', `Menyiapkan download ${song.title}`);
+            try {
+                const sourceUrl = await resolveSongUrl(song);
+                const response = await fetch(sourceUrl);
+                if (!response.ok) throw new Error('File tidak dapat diunduh');
+                const blob = await response.blob();
+                const downloadUrl = URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                link.href = downloadUrl;
+                link.download = `${song.title.replace(/[\\/:*?"<>|]/g, '-').trim()}.mp3`;
+                document.body.appendChild(link);
+                link.click();
+                link.remove();
+                setTimeout(() => URL.revokeObjectURL(downloadUrl), 1500);
+                button.innerHTML = '<i class="fas fa-check text-green-500"></i>';
+                setTimeout(() => { button.innerHTML = originalIcon; }, 1600);
+            } catch (error) {
+                console.error('Download error:', error);
+                button.innerHTML = '<i class="fas fa-triangle-exclamation text-red-500"></i>';
+                alert(`Gagal mengunduh ${song.title}. Coba lagi.`);
+                setTimeout(() => { button.innerHTML = originalIcon; }, 1600);
+            } finally {
+                button.disabled = false;
+                button.setAttribute('aria-label', `Download ${song.title}`);
+            }
         }
 
         async function loadSongById(songId, autoplay = isPlaying) {
