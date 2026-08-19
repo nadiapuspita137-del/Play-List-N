@@ -2,6 +2,7 @@
   let db = null;
   let profile = null;
   let ready = false;
+  let songSortOrder = 'az';
   const DEFAULTS = {
     view_dashboard: true,
     view_statistics: true,
@@ -35,6 +36,7 @@
     setInterval(syncProfile, 5000);
     observeAdminList();
     installGuards();
+    tryInstallSongFilter();
   }
 
   async function syncProfile() {
@@ -47,6 +49,7 @@
     applyAccess();
     patchAdminCreationForm();
     patchAdminRows();
+    tryInstallSongFilter();
   }
 
   function applyAccess() {
@@ -78,6 +81,7 @@
       const nav = e.target.closest('.nav-item[data-page]');
       const go = e.target.closest('[data-go]');
       const page = nav?.dataset.page || go?.dataset.go;
+      if (page === 'songs') setTimeout(() => tryInstallSongFilter(), 250);
       if (!page || !profile || profile.role === 'super_admin') return;
       const map = { dashboard: 'view_dashboard', statistics: 'view_statistics', 'song-form': 'add_song', songs: 'view_songs' };
       if (map[page] && !permissionValue(map[page])) {
@@ -191,6 +195,54 @@
     });
   }
 
+  // Song sorting is deliberately event-driven. No MutationObserver watches #songList,
+  // so moving rows cannot trigger another sort cycle or lock up the admin panel.
+  function getSongTitle(row) {
+    const clone = row.cloneNode(true);
+    clone.querySelectorAll('.actions, button, input, textarea, select, img').forEach(el => el.remove());
+    return clone.textContent.replace(/\s+/g, ' ').trim();
+  }
+
+  function sortSongs(order) {
+    const list = document.getElementById('songList');
+    if (!list) return;
+    const rows = Array.from(list.children).filter(el => el.classList.contains('song'));
+    if (rows.length < 2) return;
+    rows.sort((a, b) => {
+      const result = getSongTitle(a).localeCompare(getSongTitle(b), 'id-ID', { numeric: true, sensitivity: 'base' });
+      return order === 'za' ? -result : result;
+    });
+    const fragment = document.createDocumentFragment();
+    rows.forEach(row => fragment.appendChild(row));
+    list.appendChild(fragment);
+  }
+
+  function installSongFilter() {
+    const list = document.getElementById('songList');
+    if (!list || document.getElementById('songSortFilter')) return false;
+    const wrapper = document.createElement('div');
+    wrapper.id = 'songSortFilter';
+    wrapper.className = 'song-filter-bar';
+    wrapper.innerHTML = `
+      <span class="song-filter-label">Urutkan lagu</span>
+      <button type="button" class="btn ghost song-sort-btn active" data-sort="az">A-Z</button>
+      <button type="button" class="btn ghost song-sort-btn" data-sort="za">Z-A</button>`;
+    list.parentNode.insertBefore(wrapper, list);
+    wrapper.addEventListener('click', e => {
+      const button = e.target.closest('.song-sort-btn');
+      if (!button) return;
+      songSortOrder = button.dataset.sort === 'za' ? 'za' : 'az';
+      wrapper.querySelectorAll('.song-sort-btn').forEach(btn => btn.classList.toggle('active', btn === button));
+      sortSongs(songSortOrder);
+    });
+    return true;
+  }
+
+  function tryInstallSongFilter(attempt = 0) {
+    if (installSongFilter() || attempt >= 10) return;
+    setTimeout(() => tryInstallSongFilter(attempt + 1), 300);
+  }
+
   const style = document.createElement('style');
   style.textContent = `
     .permission-editor{margin-top:12px;padding:14px;border:1px solid #294039;border-radius:15px;background:#0a1210}
@@ -201,7 +253,11 @@
     .permission-item input{margin-top:3px;accent-color:#00dc7c}
     .permission-item span{display:grid;gap:3px}
     .permission-save{margin-top:10px}
-    @media(max-width:760px){.permission-grid{grid-template-columns:1fr}}
+    .song-filter-bar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:0 0 12px;padding:10px 12px;border:1px solid #263a34;border-radius:13px;background:#0b1311}
+    .song-filter-label{color:#91a29b;font-size:12px;font-weight:750;margin-right:2px}
+    .song-filter-bar .song-sort-btn{padding:8px 13px;font-size:12px}
+    .song-filter-bar .song-sort-btn.active{background:linear-gradient(135deg,#00ec84,#00b968);color:#03130b;border-color:transparent}
+    @media(max-width:760px){.permission-grid{grid-template-columns:1fr}.song-filter-bar{width:100%}.song-filter-bar .song-sort-btn{flex:1}}
   `;
   document.head.appendChild(style);
 
