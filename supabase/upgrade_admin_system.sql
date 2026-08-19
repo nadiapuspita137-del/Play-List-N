@@ -17,6 +17,7 @@ create table if not exists public.song_events(
  session_id text,
  created_at timestamptz not null default now()
 );
+drop view if exists public.song_stats;
 alter table public.song_events drop constraint if exists song_events_song_id_fkey;
 alter table public.song_events alter column song_id type text using song_id::text;
 alter table public.song_events enable row level security;
