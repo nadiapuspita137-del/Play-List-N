@@ -1,11 +1,13 @@
 (() => {
   // Tombol download khusus panel admin.
-  // Admin/super admin boleh mengunduh SEMUA lagu yang tampil,
-  // termasuk lagu yang ditandai Dilindungi.
-  if (!/\/admin\.html(?:$|[?#])/.test(window.location.pathname + window.location.search + window.location.hash)) return;
+  // Tidak ada pembatas owner di sini: semua lagu yang tampil di daftar admin
+  // dapat diunduh, termasuk lagu berstatus "Dilindungi".
 
   const localMediaUrl = (url) =>
-    (url || '').replace(/^https:\/\/nadiapuspita137-del\.github\.io\/Play-List-N\//, '');
+    (url || '').replace(
+      /^https:\/\/nadiapuspita137-del\.github\.io\/Play-List-N\//,
+      '',
+    );
 
   const safeFileName = (value) =>
     String(value || 'lagu')
@@ -19,7 +21,7 @@
   function getAdminDb() {
     if (adminDb) return adminDb;
     const cfg = window.SUPABASE_CONFIG;
-    if (!cfg || !window.supabase) return null;
+    if (!cfg || !window.supabase?.createClient) return null;
     adminDb = window.supabase.createClient(cfg.url, cfg.publishableKey, {
       auth: {
         storage: window.sessionStorage,
@@ -70,17 +72,16 @@
 
     const db = getAdminDb();
     if (!db) {
-      alert('Sistem database belum siap. Coba sebentar lagi.');
+      alert('Database belum siap. Coba lagi sebentar.');
       return;
     }
 
-    const original = button.innerHTML;
+    const original = button.textContent;
     button.disabled = true;
-    button.innerHTML = 'Mengunduh…';
+    button.textContent = 'Mengunduh…';
 
     try {
-      // Tidak memakai pengecekan owner/allowed. Admin dapat mengunduh semua lagu
-      // yang tampil di panel, termasuk baris yang bertuliskan "Dilindungi".
+      // Sengaja tidak mengecek owner/allowed. Admin boleh download semua lagu.
       const { data: song, error } = await db
         .from('songs')
         .select('id,title,artist,audio_url,audio_parts')
@@ -102,50 +103,69 @@
       setTimeout(() => URL.revokeObjectURL(url), 30000);
 
       await recordDownload(song.id);
-      button.innerHTML = '✓ Selesai';
+      button.textContent = '✓ Selesai';
       setTimeout(() => {
-        button.innerHTML = original;
+        button.textContent = original;
         button.disabled = false;
       }, 1200);
     } catch (error) {
       console.error('Download lagu gagal:', error);
       alert(`Download gagal: ${error.message || 'Terjadi kesalahan.'}`);
-      button.innerHTML = original;
+      button.textContent = original;
       button.disabled = false;
     }
   }
 
-  function enhanceSongList() {
-    document.querySelectorAll('#songList .song').forEach((row) => {
+  function addDownloadButtons() {
+    const list = document.getElementById('songList');
+    if (!list) return false;
+
+    list.querySelectorAll('.song[data-id]').forEach((row) => {
       const actions = row.querySelector('.actions');
-      const songId = row.dataset.id;
+      const songId = row.getAttribute('data-id');
       if (!actions || !songId || actions.querySelector('[data-admin-download]')) return;
 
       const button = document.createElement('button');
       button.type = 'button';
-      button.className = 'btn ghost';
+      button.className = 'btn ghost admin-download-button';
       button.dataset.adminDownload = '1';
       button.title = 'Download MP3';
       button.textContent = 'Download';
       button.addEventListener('click', () => downloadSong(songId, button));
       actions.appendChild(button);
     });
+
+    return true;
   }
 
-  function init() {
-    enhanceSongList();
+  function start() {
+    // render() milik admin.html mengosongkan dan membuat ulang songList,
+    // jadi MutationObserver memastikan tombol selalu muncul setelah render/search.
+    addDownloadButtons();
     const list = document.getElementById('songList');
-    if (!list) return setTimeout(init, 250);
-
-    const observer = new MutationObserver(enhanceSongList);
-    observer.observe(list, { childList: true, subtree: true });
+    if (list && !list.dataset.downloadObserver) {
+      list.dataset.downloadObserver = '1';
+      new MutationObserver(addDownloadButtons).observe(list, {
+        childList: true,
+        subtree: true,
+      });
+    }
   }
 
-  // Jangan bergantung pada Supabase yang sudah selesai loading saat script ini
-  // pertama kali dieksekusi. Database dibuat saat tombol benar-benar dipakai.
+  // Supabase-config memuat file ini secara defer. Tunggu DOM tanpa bergantung
+  // pada urutan eksekusi script lain.
   if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', init, { once: true });
+    document.addEventListener('DOMContentLoaded', start, { once: true });
   } else {
-    init();
+    start();
   }
+
+  // Fallback untuk kasus panel membuat #songList setelah login.
+  const retry = setInterval(() => {
+    if (document.getElementById('songList')) {
+      start();
+      clearInterval(retry);
+    }
+  }, 250);
+  setTimeout(() => clearInterval(retry), 30000);
 })();
