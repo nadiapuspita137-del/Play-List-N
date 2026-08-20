@@ -1,26 +1,11 @@
 (() => {
   // Tombol download khusus panel admin.
-  // Admin/super admin boleh mengunduh SEMUA lagu yang terlihat di panel,
-  // termasuk lagu yang hanya dapat dilihat karena kepemilikan/role admin.
+  // Admin/super admin boleh mengunduh SEMUA lagu yang tampil,
+  // termasuk lagu yang ditandai Dilindungi.
   if (!/\/admin\.html(?:$|[?#])/.test(window.location.pathname + window.location.search + window.location.hash)) return;
 
-  const cfg = window.SUPABASE_CONFIG;
-  if (!cfg || !window.supabase) return;
-
-  const adminDb = window.supabase.createClient(cfg.url, cfg.publishableKey, {
-    auth: {
-      storage: window.sessionStorage,
-      persistSession: true,
-      autoRefreshToken: true,
-      detectSessionInUrl: false,
-    },
-  });
-
   const localMediaUrl = (url) =>
-    (url || '').replace(
-      /^https:\/\/nadiapuspita137-del\.github\.io\/Play-List-N\//,
-      '',
-    );
+    (url || '').replace(/^https:\/\/nadiapuspita137-del\.github\.io\/Play-List-N\//, '');
 
   const safeFileName = (value) =>
     String(value || 'lagu')
@@ -28,6 +13,23 @@
       .replace(/\s+/g, ' ')
       .trim()
       .slice(0, 150) || 'lagu';
+
+  let adminDb = null;
+
+  function getAdminDb() {
+    if (adminDb) return adminDb;
+    const cfg = window.SUPABASE_CONFIG;
+    if (!cfg || !window.supabase) return null;
+    adminDb = window.supabase.createClient(cfg.url, cfg.publishableKey, {
+      auth: {
+        storage: window.sessionStorage,
+        persistSession: true,
+        autoRefreshToken: true,
+        detectSessionInUrl: false,
+      },
+    });
+    return adminDb;
+  }
 
   async function getAudioBlob(song) {
     if (Array.isArray(song.audio_parts) && song.audio_parts.length) {
@@ -50,8 +52,10 @@
   }
 
   async function recordDownload(songId) {
+    const db = getAdminDb();
+    if (!db) return;
     try {
-      await adminDb.from('song_events').insert({
+      await db.from('song_events').insert({
         song_id: String(songId),
         event_type: 'download',
         session_id: `admin-${sessionStorage.getItem('playlist_admin_session') || 'unknown'}`,
@@ -64,14 +68,20 @@
   async function downloadSong(songId, button) {
     if (button.disabled) return;
 
+    const db = getAdminDb();
+    if (!db) {
+      alert('Sistem database belum siap. Coba sebentar lagi.');
+      return;
+    }
+
     const original = button.innerHTML;
     button.disabled = true;
     button.innerHTML = 'Mengunduh…';
 
     try {
-      // Query langsung berdasarkan ID. Tidak lagi membatasi download berdasarkan
-      // adanya tombol edit/delete, sehingga lagu protected/owned tetap bisa diunduh.
-      const { data: song, error } = await adminDb
+      // Tidak memakai pengecekan owner/allowed. Admin dapat mengunduh semua lagu
+      // yang tampil di panel, termasuk baris yang bertuliskan "Dilindungi".
+      const { data: song, error } = await db
         .from('songs')
         .select('id,title,artist,audio_url,audio_parts')
         .eq('id', songId)
@@ -111,8 +121,6 @@
       const songId = row.dataset.id;
       if (!actions || !songId || actions.querySelector('[data-admin-download]')) return;
 
-      // Semua baris lagu yang tampil di panel admin mendapat tombol Download,
-      // termasuk lagu protected/milik user lain.
       const button = document.createElement('button');
       button.type = 'button';
       button.className = 'btn ghost';
@@ -133,6 +141,8 @@
     observer.observe(list, { childList: true, subtree: true });
   }
 
+  // Jangan bergantung pada Supabase yang sudah selesai loading saat script ini
+  // pertama kali dieksekusi. Database dibuat saat tombol benar-benar dipakai.
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', init, { once: true });
   } else {
