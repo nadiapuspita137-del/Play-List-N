@@ -138,15 +138,31 @@
     const permissions = { ...DEFAULTS, ...(data?.permissions || {}) };
     const box = document.createElement('div');
     box.className = 'permission-editor permission-row-editor';
-    box.innerHTML = `<div class="permission-title"><b>Hak akses</b><small>Owner bisa mengubah akses kapan saja.</small></div><div class="permission-grid">${Object.entries(LABELS).map(([key, [label, help]]) => `<label class="permission-item"><input type="checkbox" data-permission="${key}" ${permissions[key] ? 'checked' : ''}><span><b>${label}</b><small>${help}</small></span></label>`).join('')}</div><button type="button" class="btn primary permission-save">Simpan Akses</button>`;
+    box.innerHTML = `<div class="permission-row-summary"><div><b>Hak akses admin</b><small>${Object.entries(permissions).filter(([, value]) => value).length}/${Object.keys(LABELS).length} akses aktif</small></div><button type="button" class="btn ghost permission-toggle" aria-expanded="false">Atur Akses</button></div><div class="permission-row-body hidden"><div class="permission-title"><b>Hak akses</b><small>Owner bisa mengubah akses kapan saja.</small></div><div class="permission-grid">${Object.entries(LABELS).map(([key, [label, help]]) => `<label class="permission-item"><input type="checkbox" data-permission="${key}" ${permissions[key] ? 'checked' : ''}><span><b>${label}</b><small>${help}</small></span></label>`).join('')}</div><button type="button" class="btn primary permission-save">Simpan Akses</button></div>`;
     row.appendChild(box);
+
+    const toggle = box.querySelector('.permission-toggle');
+    const body = box.querySelector('.permission-row-body');
+    toggle.onclick = () => {
+      const expanded = !body.classList.contains('hidden');
+      body.classList.toggle('hidden', expanded);
+      toggle.setAttribute('aria-expanded', String(!expanded));
+      toggle.textContent = expanded ? 'Atur Akses' : 'Tutup';
+    };
+
     box.querySelector('.permission-save').onclick = async () => {
-      const next = {}; Object.keys(LABELS).forEach(key => next[key] = !!box.querySelector(`[data-permission="${key}"]`)?.checked);
+      const next = {};
+      Object.keys(LABELS).forEach(key => next[key] = !!box.querySelector(`[data-permission="${key}"]`)?.checked);
       const button = box.querySelector('.permission-save'); button.disabled = true;
       const { error } = await db.from('profiles').update({ permissions: next }).eq('id', id);
       button.disabled = false;
       if (error) return showAdminPermissionMsg(`Gagal menyimpan akses: ${error.message}`, true);
+      const activeCount = Object.values(next).filter(Boolean).length;
+      box.querySelector('.permission-row-summary small').textContent = `${activeCount}/${Object.keys(LABELS).length} akses aktif`;
       showAdminPermissionMsg('Hak akses admin berhasil diperbarui.');
+      body.classList.add('hidden');
+      toggle.setAttribute('aria-expanded', 'false');
+      toggle.textContent = 'Atur Akses';
     };
   }
 
@@ -193,8 +209,6 @@
       songSortOrder = button.dataset.sort;
       wrapper.querySelectorAll('.song-sort-btn').forEach(btn => btn.classList.toggle('active', btn === button));
       if (songSortOrder === 'az' || songSortOrder === 'za') sortSongs(songSortOrder);
-      // 'Tanpa filter' deliberately does not reshuffle or reload data.
-      // It simply stops applying a sort. New data will appear in its normal load order.
     });
     return true;
   }
@@ -205,7 +219,7 @@
   }
 
   const style = document.createElement('style');
-  style.textContent = `.permission-editor{margin-top:12px;padding:14px;border:1px solid #294039;border-radius:15px;background:#0a1210}.permission-title{display:flex;flex-direction:column;gap:3px;margin-bottom:11px}.permission-title small,.permission-item small{color:#82928c;font-size:11px;font-weight:500}.permission-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.permission-item{display:flex;align-items:flex-start;gap:9px;padding:10px;border:1px solid #263a34;border-radius:11px;background:#0d1714;cursor:pointer}.permission-item input{margin-top:3px;accent-color:#00dc7c}.permission-item span{display:grid;gap:3px}.permission-save{margin-top:10px}.song-filter-bar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:0 0 12px;padding:10px 12px;border:1px solid #263a34;border-radius:13px;background:#0b1311}.song-filter-label{color:#91a29b;font-size:12px;font-weight:750;margin-right:2px}.song-filter-bar .song-sort-btn{padding:8px 13px;font-size:12px}.song-filter-bar .song-sort-btn.active{background:linear-gradient(135deg,#00ec84,#00b968);color:#03130b;border-color:transparent}@media(max-width:760px){.permission-grid{grid-template-columns:1fr}.song-filter-bar{width:100%}.song-filter-bar .song-sort-btn{flex:1}}`;
+  style.textContent = `.permission-editor{margin-top:10px;padding:11px;border:1px solid #294039;border-radius:14px;background:#0a1210}.permission-title{display:flex;flex-direction:column;gap:3px;margin-bottom:11px}.permission-title small,.permission-item small,.permission-row-summary small{color:#82928c;font-size:11px;font-weight:500}.permission-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.permission-item{display:flex;align-items:flex-start;gap:9px;padding:10px;border:1px solid #263a34;border-radius:11px;background:#0d1714;cursor:pointer}.permission-item input{margin-top:3px;accent-color:#00dc7c}.permission-item span{display:grid;gap:3px}.permission-save{margin-top:10px}.permission-row-editor{padding:8px 10px}.permission-row-summary{display:flex;align-items:center;justify-content:space-between;gap:10px}.permission-row-summary>div{display:flex;align-items:baseline;gap:8px;min-width:0}.permission-row-summary b{font-size:11px}.permission-row-summary small{white-space:nowrap}.permission-toggle{padding:7px 10px;font-size:10px;white-space:nowrap}.permission-row-body{margin-top:8px}.song-filter-bar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:0 0 12px;padding:10px 12px;border:1px solid #263a34;border-radius:13px;background:#0b1311}.song-filter-label{color:#91a29b;font-size:12px;font-weight:750;margin-right:2px}.song-filter-bar .song-sort-btn{padding:8px 13px;font-size:12px}.song-filter-bar .song-sort-btn.active{background:linear-gradient(135deg,#00ec84,#00b968);color:#03130b;border-color:transparent}@media(max-width:760px){.permission-grid{grid-template-columns:1fr}.permission-row-summary{align-items:flex-start}.permission-row-summary>div{flex-direction:column;gap:2px}.song-filter-bar{width:100%}.song-filter-bar .song-sort-btn{flex:1}}`;
   document.head.appendChild(style);
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
