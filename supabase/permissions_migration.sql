@@ -1,7 +1,11 @@
 -- FINAL permission migration for current Play List N schema.
 -- Prerequisite: supabase/upgrade_admin_system.sql must already be applied.
--- All IDs in profiles/songs are UUID in the current database.
--- song_events.song_id remains TEXT for backward compatibility.
+-- Current schema discovered from Supabase:
+--   profiles.id = uuid
+--   songs.id = uuid
+--   songs.owner_id = uuid
+--   storage.objects.owner_id = text
+--   song_events.song_id = text
 
 alter table public.profiles
   add column if not exists permissions jsonb not null default jsonb_build_object(
@@ -142,7 +146,7 @@ with check (
   )
 );
 
--- Storage objects.owner_id is UUID in Supabase storage.objects.
+-- Storage objects.owner_id is TEXT in the current Supabase schema.
 create policy "public reads media"
 on storage.objects for select
 using (bucket_id in ('audio','covers'));
@@ -165,7 +169,7 @@ using (
   bucket_id in ('audio','covers')
   and (
     public.is_super_admin()
-    or (owner_id = auth.uid() and public.has_permission('edit_song'))
+    or (owner_id = auth.uid()::text and public.has_permission('edit_song'))
   )
 );
 
@@ -175,7 +179,7 @@ using (
   bucket_id in ('audio','covers')
   and (
     public.is_super_admin()
-    or (owner_id = auth.uid() and public.has_permission('delete_song'))
+    or (owner_id = auth.uid()::text and public.has_permission('delete_song'))
   )
 );
 
