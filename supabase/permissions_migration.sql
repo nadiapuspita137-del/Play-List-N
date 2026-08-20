@@ -1,7 +1,7 @@
--- Permission matrix + policy reset untuk admin/editor.
--- Jalankan setelah supabase/upgrade_admin_system.sql.
--- Migration ini sengaja membersihkan policy lama yang mungkin masih
--- membandingkan text dengan uuid, lalu membuat policy final dari awal.
+-- FINAL permission migration for current Play List N schema.
+-- Prerequisite: supabase/upgrade_admin_system.sql must already be applied.
+-- All IDs in profiles/songs are UUID in the current database.
+-- song_events.song_id remains TEXT for backward compatibility.
 
 alter table public.profiles
   add column if not exists permissions jsonb not null default jsonb_build_object(
@@ -26,7 +26,6 @@ set permissions = jsonb_build_object(
 )
 where role = 'editor';
 
--- Helper permission.
 create or replace function public.has_permission(p_permission text)
 returns boolean
 language sql stable security definer set search_path = public
@@ -35,16 +34,14 @@ as $$
     or exists (
       select 1
       from public.profiles p
-      where p.id::text = auth.uid()::text
+      where p.id = auth.uid()
         and p.role = 'editor'
         and p.is_active
         and coalesce((p.permissions ->> p_permission)::boolean, false)
     )
 $$;
 
--- Bersihkan semua policy lama pada tabel yang dikendalikan migration ini.
--- Ini penting karena policy lama dengan nama berbeda dapat tetap aktif
--- dan masih mengandung ekspresi text = uuid.
+-- Remove policy variants created by earlier migrations so stale expressions do not survive.
 do $$
 declare
   r record;
@@ -68,10 +65,10 @@ begin
   end loop;
 end $$;
 
--- PROFILE POLICIES
+-- Profiles
 create policy "user reads own profile"
 on public.profiles for select
-using (id::text = auth.uid()::text);
+using (id = auth.uid());
 
 create policy "owner reads all profiles"
 on public.profiles for select
@@ -86,7 +83,7 @@ on public.profiles for update
 using (public.is_super_admin())
 with check (public.is_super_admin());
 
--- SONG POLICIES
+-- Songs
 create policy "public reads active songs"
 on public.songs for select
 using (
@@ -94,7 +91,7 @@ using (
   or (
     public.is_staff()
     and public.has_permission('view_songs')
-    and (public.is_super_admin() or owner_id::text = auth.uid()::text)
+    and (public.is_super_admin() or owner_id = auth.uid())
   )
 );
 
@@ -102,7 +99,7 @@ create policy "staff inserts owned songs"
 on public.songs for insert
 with check (
   public.can_add_song()
-  and (public.is_super_admin() or owner_id::text = auth.uid()::text)
+  and (public.is_super_admin() or owner_id = auth.uid())
 );
 
 create policy "staff updates allowed songs"
@@ -110,14 +107,14 @@ on public.songs for update
 using (
   public.is_super_admin()
   or (
-    owner_id::text = auth.uid()::text
+    owner_id = auth.uid()
     and (public.has_permission('edit_song') or public.has_permission('publish_song'))
   )
 )
 with check (
   public.is_super_admin()
   or (
-    owner_id::text = auth.uid()::text
+    owner_id = auth.uid()
     and (public.has_permission('edit_song') or public.has_permission('publish_song'))
   )
 );
@@ -126,31 +123,26 @@ create policy "staff deletes allowed songs"
 on public.songs for delete
 using (
   public.is_super_admin()
-  or (
-    owner_id::text = auth.uid()::text
-    and public.has_permission('delete_song')
-  )
+  or (owner_id = auth.uid() and public.has_permission('delete_song'))
 );
 
--- SONG EVENT POLICIES
+-- Song events. song_events.song_id is TEXT, so explicitly cast the UUID song id to text.
 create policy "staff reads events"
 on public.song_events for select
 using (public.is_super_admin() or public.has_permission('view_statistics'));
 
--- Event insert policy final akan dipasang oleh security_hardening.sql.
--- Untuk menjaga backward compatibility sebelum hardening dijalankan,
--- gunakan validasi dasar: event harus menunjuk lagu yang ada.
 create policy "validated song events"
 on public.song_events for insert
 with check (
   event_type in ('play','download')
   and exists (
-    select 1 from public.songs s
-    where s.id::text = song_events.song_id::text
+    select 1
+    from public.songs s
+    where s.id::text = song_events.song_id
   )
 );
 
--- STORAGE POLICIES
+-- Storage objects.owner_id is UUID in Supabase storage.objects.
 create policy "public reads media"
 on storage.objects for select
 using (bucket_id in ('audio','covers'));
@@ -173,7 +165,7 @@ using (
   bucket_id in ('audio','covers')
   and (
     public.is_super_admin()
-    or (owner_id::text = auth.uid()::text and public.has_permission('edit_song'))
+    or (owner_id = auth.uid() and public.has_permission('edit_song'))
   )
 );
 
@@ -183,11 +175,11 @@ using (
   bucket_id in ('audio','covers')
   and (
     public.is_super_admin()
-    or (owner_id::text = auth.uid()::text and public.has_permission('delete_song'))
+    or (owner_id = auth.uid() and public.has_permission('delete_song'))
   )
 );
 
--- DB-level separation antara hak edit dan publish.
+-- DB-level separation between edit and publish.
 create or replace function public.enforce_song_permission_changes()
 returns trigger
 language plpgsql
@@ -199,7 +191,7 @@ begin
     return new;
   end if;
 
-  if new.owner_id::text is distinct from old.owner_id::text then
+  if new.owner_id is distinct from old.owner_id then
     raise exception 'Anda tidak boleh memindahkan kepemilikan lagu';
   end if;
 
@@ -233,5 +225,4 @@ $$;
 drop trigger if exists trg_enforce_song_permission_changes on public.songs;
 create trigger trg_enforce_song_permission_changes
 before update on public.songs
-for each row
-execute function public.enforce_song_permission_changes();
+for each row execute function public.enforce_song_permission_changes();
