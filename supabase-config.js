@@ -5,8 +5,11 @@ window.SUPABASE_CONFIG = {
 
 // Muat kontrol permission tambahan sebelum panel admin berjalan.
 (() => {
-  const script = document.createElement('script');
-  script.src = 'admin-permissions.js';
-  script.defer = true;
-  document.head.appendChild(script);
+  const scripts = ['admin-permissions.js', 'admin-quota-fix.js'];
+  scripts.forEach((src) => {
+    const script = document.createElement('script');
+    script.src = src;
+    script.defer = true;
+    document.head.appendChild(script);
+  });
 })();
