@@ -1,6 +1,7 @@
 (() => {
   // Tombol download khusus panel admin.
-  // Script ini sengaja tidak berjalan di website publik.
+  // Admin/super admin boleh mengunduh SEMUA lagu yang terlihat di panel,
+  // termasuk lagu yang hanya dapat dilihat karena kepemilikan/role admin.
   if (!/\/admin\.html(?:$|[?#])/.test(window.location.pathname + window.location.search + window.location.hash)) return;
 
   const cfg = window.SUPABASE_CONFIG;
@@ -68,6 +69,8 @@
     button.innerHTML = 'Mengunduh…';
 
     try {
+      // Query langsung berdasarkan ID. Tidak lagi membatasi download berdasarkan
+      // adanya tombol edit/delete, sehingga lagu protected/owned tetap bisa diunduh.
       const { data: song, error } = await adminDb
         .from('songs')
         .select('id,title,artist,audio_url,audio_parts')
@@ -108,11 +111,8 @@
       const songId = row.dataset.id;
       if (!actions || !songId || actions.querySelector('[data-admin-download]')) return;
 
-      // Lagu yang tidak boleh diedit/dihapus oleh akun ini juga tidak diberi
-      // tombol download. Dengan begitu aturan kepemilikan panel tetap konsisten.
-      const hasManagementAction = actions.querySelector('button[onclick*="editSong"]');
-      if (!hasManagementAction) return;
-
+      // Semua baris lagu yang tampil di panel admin mendapat tombol Download,
+      // termasuk lagu protected/milik user lain.
       const button = document.createElement('button');
       button.type = 'button';
       button.className = 'btn ghost';
