@@ -17,7 +17,7 @@
 
   const localMediaUrl = (url) =>
     (url || '').replace(
-      /^https:\/\/nadiapuspita137-del\\.github\\.io\/Play-List-N\//,
+      /^https:\/\/nadiapuspita137-del\.github\.io\/Play-List-N\//,
       '',
     );
 
