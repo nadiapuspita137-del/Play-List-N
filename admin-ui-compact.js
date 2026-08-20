@@ -85,6 +85,20 @@
       border-color: #3b6a59;
     }
 
+    .admin-edit-btn {
+      min-height: 30px;
+      padding: 7px 10px;
+      border-radius: 8px;
+      background: #0f1a16;
+      color: #a8e5c9;
+      border: 1px solid #29453a;
+      font-size: 10px;
+      font-weight: 850;
+      cursor: pointer;
+    }
+
+    .admin-edit-btn:hover { background: #13231d; border-color: #3a6755; }
+
     .admin-access-dropdown {
       position: absolute;
       top: calc(100% + 8px);
@@ -224,46 +238,34 @@
     if (!editor) return;
     row.dataset.dropdownReady = '1';
 
-    const inputNodes = [...editor.querySelectorAll('[data-permission]')];
-    const info = row.querySelector('.admin-row > div:nth-child(2)');
-    if (!info) return;
-
-    const wrap = document.createElement('div');
-    wrap.className = 'admin-access-wrap';
-
-    const button = document.createElement('button');
-    button.type = 'button';
-    button.className = 'admin-access-dropdown-btn';
-    button.textContent = `Hak Akses (${inputNodes.filter((x) => x.checked).length}/${inputNodes.length}) ▾`;
-
-    const dropdown = document.createElement('div');
-    dropdown.className = 'admin-access-dropdown';
-
-    const title = document.createElement('div');
-    title.className = 'admin-access-title';
-    title.innerHTML = '<b>Hak Akses Admin</b><span>Pilih akses yang diperbolehkan</span>';
-    dropdown.appendChild(title);
-    dropdown.appendChild(editor);
-
-    const save = editor.querySelector('.permission-save');
-    if (save) {
-      save.addEventListener('click', () => {
-        setTimeout(() => {
-          const checked = editor.querySelectorAll('[data-permission]:checked').length;
-          button.textContent = `Hak Akses (${checked}/${inputNodes.length}) ▾`;
-          wrap.classList.remove('open');
-        }, 100);
-      });
-    }
-
-    wrap.appendChild(button);
-    wrap.appendChild(dropdown);
+    // hide inline editor to keep list clean; use central panel instead
+    editor.style.display = 'none';
 
     const actions = row.querySelector('.admin-actions');
-    if (actions) actions.insertBefore(wrap, actions.firstChild);
-    else info.appendChild(wrap);
+    const info = row.querySelector('.admin-row > div:nth-child(2)') || row;
 
-    editor.style.display = 'block';
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'admin-edit-btn';
+    btn.textContent = 'Edit';
+    btn.addEventListener('click', (e) => {
+      e.preventDefault();
+      if (typeof openAccessPanel === 'function') {
+        openAccessPanel(row, editor, btn);
+      } else {
+        const id = row.dataset.adminId || row.dataset.userId || row.dataset.songId || null;
+        if (id) window.location.href = `/admin/edit/${id}`;
+        else alert('Editor tidak tersedia.');
+      }
+    });
+
+    if (actions) actions.insertBefore(btn, actions.firstChild);
+    else {
+      const actionWrap = document.createElement('div');
+      actionWrap.className = 'admin-actions';
+      actionWrap.appendChild(btn);
+      info.appendChild(actionWrap);
+    }
   }
 
   function scan() {
