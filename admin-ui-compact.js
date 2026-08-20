@@ -4,8 +4,8 @@
   const css = document.createElement('style');
   css.id = 'admin-ui-compact-style';
   css.textContent = `
-    /* Compact owner admin list */
     #ownerTools .admin-row {
+      position: relative;
       display: grid !important;
       grid-template-columns: 42px minmax(0,1fr) auto !important;
       align-items: center !important;
@@ -14,6 +14,7 @@
       padding: 11px 13px !important;
       border-radius: 14px !important;
       background: #0b1210 !important;
+      overflow: visible !important;
     }
 
     #ownerTools #adminList {
@@ -59,115 +60,119 @@
       white-space: nowrap !important;
     }
 
-    .admin-access-summary {
-      display: flex;
+    .admin-access-wrap {
+      position: relative;
+      display: inline-flex;
       align-items: center;
-      gap: 7px;
-      margin-top: 5px;
-      color: #71847a;
-      font-size: 10px;
     }
 
-    .admin-access-summary .dot {
-      width: 6px;
-      height: 6px;
-      border-radius: 50%;
-      background: #00dc7c;
-      flex: none;
-    }
-
-    .admin-access-btn {
-      margin-left: 4px;
-      padding: 3px 7px;
+    .admin-access-dropdown-btn {
+      min-height: 30px;
+      padding: 7px 10px;
       border: 1px solid #29443a;
-      border-radius: 7px;
+      border-radius: 8px;
       background: #101b17;
       color: #9fe9c7;
       cursor: pointer;
-      font-size: 9px;
-      font-weight: 800;
+      font-size: 10px;
+      font-weight: 850;
+      white-space: nowrap;
     }
 
-    .admin-access-btn:hover {
+    .admin-access-dropdown-btn:hover,
+    .admin-access-wrap.open .admin-access-dropdown-btn {
       background: #162720;
       border-color: #3b6a59;
     }
 
-    #adminAccessModal {
-      position: fixed;
-      inset: 0;
-      z-index: 9999;
-      display: none;
-      align-items: center;
-      justify-content: center;
-      padding: 18px;
-      background: rgba(0,0,0,.72);
-      backdrop-filter: blur(7px);
-    }
-
-    #adminAccessModal.open { display: flex; }
-
-    #adminAccessModal .access-dialog {
-      width: min(680px, 100%);
-      max-height: min(82vh, 760px);
+    .admin-access-dropdown {
+      position: absolute;
+      top: calc(100% + 8px);
+      right: 0;
+      z-index: 200;
+      width: 290px;
+      max-height: 390px;
       overflow: auto;
-      padding: 20px;
-      border: 1px solid #29443a;
-      border-radius: 18px;
-      background: linear-gradient(145deg,#111b18,#08100e);
-      box-shadow: 0 30px 100px rgba(0,0,0,.58);
+      padding: 10px;
+      border: 1px solid #2b453b;
+      border-radius: 13px;
+      background: #0b1411;
+      box-shadow: 0 18px 60px rgba(0,0,0,.55);
+      display: none;
     }
 
-    .access-head {
-      display: flex;
-      align-items: flex-start;
-      justify-content: space-between;
-      gap: 12px;
-      margin-bottom: 14px;
-    }
-
-    .access-head h3 {
-      margin: 0;
-      font-size: 18px;
-    }
-
-    .access-head small {
+    .admin-access-wrap.open .admin-access-dropdown {
       display: block;
-      margin-top: 4px;
-      color: #7e9188;
+    }
+
+    .admin-access-title {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      margin-bottom: 8px;
+      padding: 2px 2px 7px;
+      border-bottom: 1px solid #20362d;
+    }
+
+    .admin-access-title b {
       font-size: 11px;
+      color: #d9e6e0;
     }
 
-    .access-close {
-      width: 32px;
-      height: 32px;
-      border: 1px solid #2c4037;
-      border-radius: 9px;
-      background: #0c1411;
-      color: #cbd7d2;
-      cursor: pointer;
+    .admin-access-title span {
+      color: #71857c;
+      font-size: 9px;
     }
 
-    #adminAccessModal .permission-editor {
-      margin-top: 0 !important;
+    .admin-access-dropdown .permission-row-editor {
+      display: block !important;
+      margin: 0 !important;
       padding: 0 !important;
       border: 0 !important;
       background: transparent !important;
     }
 
-    #adminAccessModal .permission-title {
-      margin-bottom: 12px;
+    .admin-access-dropdown .permission-title {
+      display: none !important;
     }
 
-    #adminAccessModal .permission-grid {
+    .admin-access-dropdown .permission-grid {
       display: grid;
-      grid-template-columns: repeat(2,minmax(0,1fr));
-      gap: 8px;
+      grid-template-columns: 1fr;
+      gap: 6px;
     }
 
-    #adminAccessModal .permission-item {
-      min-height: 66px;
-      padding: 10px !important;
+    .admin-access-dropdown .permission-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+      min-height: 0;
+      padding: 8px !important;
+      border: 1px solid #20352c;
+      border-radius: 9px;
+      background: #0d1714;
+    }
+
+    .admin-access-dropdown .permission-item input {
+      margin-top: 2px;
+    }
+
+    .admin-access-dropdown .permission-item b {
+      display: block;
+      font-size: 10px;
+      color: #dce7e2;
+    }
+
+    .admin-access-dropdown .permission-item small {
+      display: none;
+    }
+
+    .admin-access-dropdown .permission-save {
+      width: 100%;
+      margin-top: 8px;
+      padding: 8px 10px;
+      font-size: 10px;
     }
 
     @media (max-width: 760px) {
@@ -183,85 +188,82 @@
         margin-top: 8px;
       }
 
-      #adminAccessModal .permission-grid {
-        grid-template-columns: 1fr;
+      .admin-access-dropdown {
+        left: 0;
+        right: auto;
+        width: min(290px, calc(100vw - 40px));
       }
     }
   `;
   document.head.appendChild(css);
 
-  let modal = null;
-
-  function ensureModal() {
-    if (modal) return modal;
-    modal = document.createElement('div');
-    modal.id = 'adminAccessModal';
-    modal.innerHTML = `
-      <div class="access-dialog">
-        <div class="access-head">
-          <div>
-            <h3>Hak Akses Admin</h3>
-            <small id="accessAdminName">Atur permission admin</small>
-          </div>
-          <button class="access-close" type="button" aria-label="Tutup">×</button>
-        </div>
-        <div id="accessEditor"></div>
-      </div>`;
-    document.body.appendChild(modal);
-
-    modal.querySelector('.access-close').addEventListener('click', closeModal);
-    modal.addEventListener('click', (e) => {
-      if (e.target === modal) closeModal();
+  function closeAll(except = null) {
+    document.querySelectorAll('.admin-access-wrap.open').forEach((wrap) => {
+      if (wrap !== except) wrap.classList.remove('open');
     });
-    document.addEventListener('keydown', (e) => {
-      if (e.key === 'Escape') closeModal();
-    });
-    return modal;
   }
 
-  function closeModal() {
-    modal?.classList.remove('open');
-    const editor = document.getElementById('accessEditor');
-    if (editor) editor.innerHTML = '';
-  }
-
-  function openEditor(row, editor) {
-    const m = ensureModal();
-    const target = document.getElementById('accessEditor');
-    const name = row.querySelector('b')?.textContent || 'Admin';
-    document.getElementById('accessAdminName').textContent = `${name} • ubah permission`;
-    target.innerHTML = '';
-    target.appendChild(editor);
-    editor.style.display = 'block';
-    m.classList.add('open');
-  }
-
-  function compactRow(row) {
-    if (row.dataset.compactReady === '1') return;
-    const editor = row.querySelector('.permission-row-editor');
-    if (!editor) return;
-
-    row.dataset.compactReady = '1';
-
-    const checkboxes = [...editor.querySelectorAll('[data-permission]')];
-    const active = checkboxes.filter((x) => x.checked).length;
-
-    const info = row.querySelector('.admin-row > div:nth-child(2)');
-    if (info && !info.querySelector('.admin-access-summary')) {
-      const summary = document.createElement('div');
-      summary.className = 'admin-access-summary';
-      summary.innerHTML = `<span class="dot"></span><span>${active}/${checkboxes.length} akses aktif</span>`;
-      const btn = document.createElement('button');
-      btn.type = 'button';
-      btn.className = 'admin-access-btn';
-      btn.textContent = 'Atur';
-      btn.addEventListener('click', () => openEditor(row, editor));
-      summary.appendChild(btn);
-      info.appendChild(summary);
+  document.addEventListener('click', (e) => {
+    const button = e.target.closest('.admin-access-dropdown-btn');
+    if (button) {
+      e.preventDefault();
+      e.stopPropagation();
+      const wrap = button.closest('.admin-access-wrap');
+      const willOpen = !wrap.classList.contains('open');
+      closeAll(wrap);
+      wrap.classList.toggle('open', willOpen);
+      return;
     }
 
-    // Do not leave the giant editor in the row.
-    editor.style.display = 'none';
+    if (!e.target.closest('.admin-access-wrap')) closeAll();
+  });
+
+  function compactRow(row) {
+    if (row.dataset.dropdownReady === '1') return;
+    const editor = row.querySelector('.permission-row-editor');
+    if (!editor) return;
+    row.dataset.dropdownReady = '1';
+
+    const inputNodes = [...editor.querySelectorAll('[data-permission]')];
+    const info = row.querySelector('.admin-row > div:nth-child(2)');
+    if (!info) return;
+
+    const wrap = document.createElement('div');
+    wrap.className = 'admin-access-wrap';
+
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'admin-access-dropdown-btn';
+    button.textContent = `Hak Akses (${inputNodes.filter((x) => x.checked).length}/${inputNodes.length}) ▾`;
+
+    const dropdown = document.createElement('div');
+    dropdown.className = 'admin-access-dropdown';
+
+    const title = document.createElement('div');
+    title.className = 'admin-access-title';
+    title.innerHTML = '<b>Hak Akses Admin</b><span>Pilih akses yang diperbolehkan</span>';
+    dropdown.appendChild(title);
+    dropdown.appendChild(editor);
+
+    const save = editor.querySelector('.permission-save');
+    if (save) {
+      save.addEventListener('click', () => {
+        setTimeout(() => {
+          const checked = editor.querySelectorAll('[data-permission]:checked').length;
+          button.textContent = `Hak Akses (${checked}/${inputNodes.length}) ▾`;
+          wrap.classList.remove('open');
+        }, 100);
+      });
+    }
+
+    wrap.appendChild(button);
+    wrap.appendChild(dropdown);
+
+    const actions = row.querySelector('.admin-actions');
+    if (actions) actions.insertBefore(wrap, actions.firstChild);
+    else info.appendChild(wrap);
+
+    editor.style.display = 'block';
   }
 
   function scan() {
@@ -278,6 +280,9 @@
     new MutationObserver(scan).observe(list, { childList: true, subtree: true });
   }
 
-  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot, { once: true });
-  else boot();
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', boot, { once: true });
+  } else {
+    boot();
+  }
 })();
