@@ -1,5 +1,9 @@
 -- Permission matrix untuk admin/editor.
 -- Jalankan setelah supabase/upgrade_admin_system.sql di Supabase SQL Editor.
+--
+-- Catatan kompatibilitas:
+-- Database lama bisa memiliki owner_id bertipe text, sedangkan auth.uid() bertipe uuid.
+-- Karena itu perbandingan owner memakai ::text di policy/trigger supaya migration aman.
 
 alter table public.profiles
   add column if not exists permissions jsonb not null default jsonb_build_object(
@@ -33,7 +37,7 @@ as $$
     or exists (
       select 1
       from public.profiles p
-      where p.id = auth.uid()
+      where p.id::text = auth.uid()::text
         and p.role = 'editor'
         and p.is_active
         and coalesce((p.permissions ->> p_permission)::boolean, false)
@@ -56,7 +60,7 @@ using (
   or (
     public.is_staff()
     and public.has_permission('view_songs')
-    and (public.is_super_admin() or owner_id = auth.uid())
+    and (public.is_super_admin() or owner_id::text = auth.uid()::text)
   )
 );
 
@@ -66,7 +70,7 @@ create policy "staff inserts owned songs"
 on public.songs for insert
 with check (
   public.can_add_song()
-  and (public.is_super_admin() or owner_id = auth.uid())
+  and (public.is_super_admin() or owner_id::text = auth.uid()::text)
 );
 
 -- Update policy mengizinkan edit atau publish; trigger di bawah memisahkan kedua hak tersebut.
@@ -76,14 +80,14 @@ on public.songs for update
 using (
   public.is_super_admin()
   or (
-    owner_id = auth.uid()
+    owner_id::text = auth.uid()::text
     and (public.has_permission('edit_song') or public.has_permission('publish_song'))
   )
 )
 with check (
   public.is_super_admin()
   or (
-    owner_id = auth.uid()
+    owner_id::text = auth.uid()::text
     and (public.has_permission('edit_song') or public.has_permission('publish_song'))
   )
 );
@@ -98,7 +102,7 @@ begin
     return new;
   end if;
 
-  if new.owner_id is distinct from old.owner_id then
+  if new.owner_id::text is distinct from old.owner_id::text then
     raise exception 'Anda tidak boleh memindahkan kepemilikan lagu';
   end if;
 
@@ -140,7 +144,7 @@ create policy "staff deletes allowed songs"
 on public.songs for delete
 using (
   public.is_super_admin()
-  or (owner_id = auth.uid() and public.has_permission('delete_song'))
+  or (owner_id::text = auth.uid()::text and public.has_permission('delete_song'))
 );
 
 -- Statistik hanya bisa dibaca editor jika diberi akses Statistik.
@@ -168,7 +172,10 @@ create policy "staff updates own media"
 on storage.objects for update
 using (
   bucket_id in ('audio','covers')
-  and (public.is_super_admin() or (owner_id = auth.uid() and public.has_permission('edit_song')))
+  and (
+    public.is_super_admin()
+    or (owner_id::text = auth.uid()::text and public.has_permission('edit_song'))
+  )
 );
 
 drop policy if exists "staff deletes own media" on storage.objects;
@@ -176,5 +183,8 @@ create policy "staff deletes own media"
 on storage.objects for delete
 using (
   bucket_id in ('audio','covers')
-  and (public.is_super_admin() or (owner_id = auth.uid() and public.has_permission('delete_song')))
+  and (
+    public.is_super_admin()
+    or (owner_id::text = auth.uid()::text and public.has_permission('delete_song'))
+  )
 );
