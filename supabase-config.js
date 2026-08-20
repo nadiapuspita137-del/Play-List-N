@@ -3,9 +3,15 @@ window.SUPABASE_CONFIG = {
   publishableKey: 'sb_publishable_94W120AdMfSw7Mp_8bS9_w_RnIbm467'
 };
 
-// Muat kontrol permission tambahan sebelum panel admin berjalan.
+// Muat kontrol permission dan penyempurnaan panel admin.
 (() => {
-  const scripts = ['admin-permissions.js', 'admin-quota-fix.js', 'admin-uploader.js', 'admin-download.js'];
+  const scripts = [
+    'admin-permissions.js',
+    'admin-quota-fix.js',
+    'admin-uploader.js',
+    'admin-download.js',
+    'admin-ui-fix.js'
+  ];
   scripts.forEach((src) => {
     const script = document.createElement('script');
     script.src = src;
