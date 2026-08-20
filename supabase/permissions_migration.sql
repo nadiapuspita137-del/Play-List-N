@@ -1,9 +1,7 @@
--- Permission matrix untuk admin/editor.
--- Jalankan setelah supabase/upgrade_admin_system.sql di Supabase SQL Editor.
---
--- Catatan kompatibilitas:
--- Database lama bisa memiliki owner_id bertipe text, sedangkan auth.uid() bertipe uuid.
--- Karena itu perbandingan owner memakai ::text di policy/trigger supaya migration aman.
+-- Permission matrix + policy reset untuk admin/editor.
+-- Jalankan setelah supabase/upgrade_admin_system.sql.
+-- Migration ini sengaja membersihkan policy lama yang mungkin masih
+-- membandingkan text dengan uuid, lalu membuat policy final dari awal.
 
 alter table public.profiles
   add column if not exists permissions jsonb not null default jsonb_build_object(
@@ -16,7 +14,6 @@ alter table public.profiles
     'publish_song', true
   );
 
--- Editor lama mendapat semua akses agar perubahan ini backward-compatible.
 update public.profiles
 set permissions = jsonb_build_object(
   'view_dashboard', true,
@@ -29,6 +26,7 @@ set permissions = jsonb_build_object(
 )
 where role = 'editor';
 
+-- Helper permission.
 create or replace function public.has_permission(p_permission text)
 returns boolean
 language sql stable security definer set search_path = public
@@ -44,15 +42,51 @@ as $$
     )
 $$;
 
--- Hanya Owner yang boleh mengubah permission editor.
-drop policy if exists "owner updates editor permissions" on public.profiles;
-create policy "owner updates editor permissions"
+-- Bersihkan semua policy lama pada tabel yang dikendalikan migration ini.
+-- Ini penting karena policy lama dengan nama berbeda dapat tetap aktif
+-- dan masih mengandung ekspresi text = uuid.
+do $$
+declare
+  r record;
+begin
+  for r in
+    select schemaname, tablename, policyname
+    from pg_policies
+    where (schemaname = 'public' and tablename in ('profiles','songs','song_events'))
+       or (schemaname = 'storage' and tablename = 'objects'
+           and policyname in (
+             'public reads media',
+             'admin uploads media',
+             'admin updates media',
+             'admin deletes media',
+             'staff uploads own media',
+             'staff updates own media',
+             'staff deletes own media'
+           ))
+  loop
+    execute format('drop policy if exists %I on %I.%I', r.policyname, r.schemaname, r.tablename);
+  end loop;
+end $$;
+
+-- PROFILE POLICIES
+create policy "user reads own profile"
+on public.profiles for select
+using (id::text = auth.uid()::text);
+
+create policy "owner reads all profiles"
+on public.profiles for select
+using (public.is_super_admin());
+
+create policy "owner inserts profiles"
+on public.profiles for insert
+with check (public.is_super_admin());
+
+create policy "owner updates profiles"
 on public.profiles for update
 using (public.is_super_admin())
 with check (public.is_super_admin());
 
--- Batasi pembacaan lagu milik editor berdasarkan akses Daftar Lagu.
-drop policy if exists "public reads active songs" on public.songs;
+-- SONG POLICIES
 create policy "public reads active songs"
 on public.songs for select
 using (
@@ -64,8 +98,6 @@ using (
   )
 );
 
--- Tambah lagu.
-drop policy if exists "staff inserts owned songs" on public.songs;
 create policy "staff inserts owned songs"
 on public.songs for insert
 with check (
@@ -73,8 +105,6 @@ with check (
   and (public.is_super_admin() or owner_id::text = auth.uid()::text)
 );
 
--- Update policy mengizinkan edit atau publish; trigger di bawah memisahkan kedua hak tersebut.
-drop policy if exists "staff updates allowed songs" on public.songs;
 create policy "staff updates allowed songs"
 on public.songs for update
 using (
@@ -92,10 +122,77 @@ with check (
   )
 );
 
--- Pisahkan hak Edit dan Publikasi pada level database.
+create policy "staff deletes allowed songs"
+on public.songs for delete
+using (
+  public.is_super_admin()
+  or (
+    owner_id::text = auth.uid()::text
+    and public.has_permission('delete_song')
+  )
+);
+
+-- SONG EVENT POLICIES
+create policy "staff reads events"
+on public.song_events for select
+using (public.is_super_admin() or public.has_permission('view_statistics'));
+
+-- Event insert policy final akan dipasang oleh security_hardening.sql.
+-- Untuk menjaga backward compatibility sebelum hardening dijalankan,
+-- gunakan validasi dasar: event harus menunjuk lagu yang ada.
+create policy "validated song events"
+on public.song_events for insert
+with check (
+  event_type in ('play','download')
+  and exists (
+    select 1 from public.songs s
+    where s.id::text = song_events.song_id::text
+  )
+);
+
+-- STORAGE POLICIES
+create policy "public reads media"
+on storage.objects for select
+using (bucket_id in ('audio','covers'));
+
+create policy "staff uploads own media"
+on storage.objects for insert
+with check (
+  bucket_id in ('audio','covers')
+  and public.is_staff()
+  and public.has_permission('add_song')
+  and (
+    public.is_super_admin()
+    or (storage.foldername(name))[1] = auth.uid()::text
+  )
+);
+
+create policy "staff updates own media"
+on storage.objects for update
+using (
+  bucket_id in ('audio','covers')
+  and (
+    public.is_super_admin()
+    or (owner_id::text = auth.uid()::text and public.has_permission('edit_song'))
+  )
+);
+
+create policy "staff deletes own media"
+on storage.objects for delete
+using (
+  bucket_id in ('audio','covers')
+  and (
+    public.is_super_admin()
+    or (owner_id::text = auth.uid()::text and public.has_permission('delete_song'))
+  )
+);
+
+-- DB-level separation antara hak edit dan publish.
 create or replace function public.enforce_song_permission_changes()
 returns trigger
-language plpgsql security definer set search_path = public
+language plpgsql
+security definer
+set search_path = public
 as $$
 begin
   if public.is_super_admin() then
@@ -136,55 +233,5 @@ $$;
 drop trigger if exists trg_enforce_song_permission_changes on public.songs;
 create trigger trg_enforce_song_permission_changes
 before update on public.songs
-for each row execute function public.enforce_song_permission_changes();
-
--- Hapus lagu.
-drop policy if exists "staff deletes allowed songs" on public.songs;
-create policy "staff deletes allowed songs"
-on public.songs for delete
-using (
-  public.is_super_admin()
-  or (owner_id::text = auth.uid()::text and public.has_permission('delete_song'))
-);
-
--- Statistik hanya bisa dibaca editor jika diberi akses Statistik.
-drop policy if exists "staff reads events" on public.song_events;
-create policy "staff reads events"
-on public.song_events for select
-using (public.is_super_admin() or public.has_permission('view_statistics'));
-
--- Storage: upload membutuhkan Tambah Lagu, update membutuhkan Edit, delete membutuhkan Hapus.
-drop policy if exists "staff uploads own media" on storage.objects;
-create policy "staff uploads own media"
-on storage.objects for insert
-with check (
-  bucket_id in ('audio','covers')
-  and public.is_staff()
-  and public.has_permission('add_song')
-  and (
-    public.is_super_admin()
-    or (storage.foldername(name))[1] = auth.uid()::text
-  )
-);
-
-drop policy if exists "staff updates own media" on storage.objects;
-create policy "staff updates own media"
-on storage.objects for update
-using (
-  bucket_id in ('audio','covers')
-  and (
-    public.is_super_admin()
-    or (owner_id::text = auth.uid()::text and public.has_permission('edit_song'))
-  )
-);
-
-drop policy if exists "staff deletes own media" on storage.objects;
-create policy "staff deletes own media"
-on storage.objects for delete
-using (
-  bucket_id in ('audio','covers')
-  and (
-    public.is_super_admin()
-    or (owner_id::text = auth.uid()::text and public.has_permission('delete_song'))
-  )
-);
+for each row
+execute function public.enforce_song_permission_changes();
