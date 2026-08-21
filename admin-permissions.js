@@ -34,7 +34,6 @@
     });
     await syncProfile();
     setInterval(syncProfile, 5000);
-    observeAdminList();
     installGuards();
     tryInstallSongFilter();
   }
@@ -48,7 +47,6 @@
     ready = true;
     applyAccess();
     patchAdminCreationForm();
-    patchAdminRows();
     tryInstallSongFilter();
   }
 
