@@ -9,8 +9,7 @@ window.SUPABASE_CONFIG = {
     'admin-permissions.js?v=7',
     'admin-quota-fix.js',
     'admin-uploader.js',
-    'admin-download.js',
-    'admin-nested-detail.js?v=7'
+    'admin-download.js'
   ];
   scripts.forEach((src) => {
     const script = document.createElement('script');
