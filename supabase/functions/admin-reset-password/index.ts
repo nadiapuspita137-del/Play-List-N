@@ -1,8 +1,11 @@
 import { createClient } from 'jsr:@supabase/supabase-js@2';
 
+const functionVersion = 'audit-session-v2';
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Expose-Headers': 'x-function-version',
+  'X-Function-Version': functionVersion,
 };
 const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const auditAction = 'admin_password_reset';
