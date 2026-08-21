@@ -7,7 +7,7 @@
     <link rel="icon" type="image/png" href="admin-favicon.png" />
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdn.jsdelivr.net/npm/tus-js-client@4/dist/tus.min.js"></script>
-    <script src="supabase-config.js?v=9"></script>
+    <script src="supabase-config.js?v=10"></script>
     <style>
       * {
         box-sizing: border-box;
@@ -1291,9 +1291,9 @@
         if (currentProfile.role === "super_admin") {
           $("ownerTools").classList.remove("hidden");
           $("navAdmins").classList.remove("hidden");
-          loadAdmins();
         } else $("migrateAudioBtn").classList.add("hidden");
         await loadSongs();
+        if (currentProfile.role === "super_admin") await loadAdmins();
         await loadStats();
         restoreDraft();
       }
@@ -1649,36 +1649,6 @@
         } finally {
           if (submitButton) submitButton.disabled = false;
         }
-      };
-      window.toggleAdmin = async (id, state) => {
-        const { error } = await db
-          .from("profiles")
-          .update({ is_active: state })
-          .eq("id", id);
-        if (error) alert(error.message);
-        else loadAdmins();
-      };
-      window.updateAdminQuota = async (id) => {
-        const input = $(`quota-${id}`),
-          quota = Number(input?.value);
-        if (!Number.isInteger(quota) || quota < 0)
-          return msg(
-            "adminMsg",
-            "Kuota harus berupa angka 0 atau lebih.",
-            true,
-          );
-        const { error } = await db
-          .from("profiles")
-          .update({ song_quota: quota })
-          .eq("id", id);
-        if (error)
-          return msg(
-            "adminMsg",
-            `Gagal mengubah kuota: ${error.message}`,
-            true,
-          );
-        msg("adminMsg", `Kuota admin berhasil diubah menjadi ${quota} lagu.`);
-        loadAdmins();
       };
       function render() {
         const term = $("songSearch").value.trim().toLowerCase();

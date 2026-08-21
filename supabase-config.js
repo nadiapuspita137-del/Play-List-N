@@ -53,8 +53,7 @@ window.SUPABASE_CONFIG = {
 (() => {
   if (!/(^|\/)admin\.html$/.test(window.location.pathname)) return;
   const scripts = [
-    'admin-permissions.js?v=9',
-    'admin-quota-fix.js',
+    'admin-permissions.js?v=10',
     'admin-uploader.js?v=2',
     'admin-download.js?v=2'
   ];
