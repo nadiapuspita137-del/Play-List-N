@@ -34,6 +34,11 @@ alter table public.admin_security_audit enable row level security;
 revoke all on table public.admin_security_audit from anon, authenticated;
 grant select on table public.admin_security_audit to authenticated;
 
+-- Project baru tidak selalu memberikan hak tabel/sequence secara otomatis.
+-- Edge Function memakai service_role, sehingga akses ini harus eksplisit.
+grant select, insert, update on table public.admin_security_audit to service_role;
+grant usage, select on sequence public.admin_security_audit_id_seq to service_role;
+
 drop policy if exists "owner reads security audit" on public.admin_security_audit;
 create policy "owner reads security audit"
   on public.admin_security_audit
