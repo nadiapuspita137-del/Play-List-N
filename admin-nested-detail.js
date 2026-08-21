@@ -1,6 +1,4 @@
 (() => {
-  if (!/admin\.html(?:$|[?#])/.test(location.pathname + location.search + location.hash)) return;
-
   const DEFAULTS = {view_dashboard:true,view_statistics:true,view_songs:true,add_song:true,edit_song:true,delete_song:true,publish_song:true};
   const LABELS = {
     view_dashboard:['Beranda','Membuka dashboard dan ringkasan.'],
