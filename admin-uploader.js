@@ -59,10 +59,9 @@
   }
 
   function install() {
-    if (installed || !window.SUPABASE_CONFIG || !window.supabase) return installed;
-    db = supabase.createClient(window.SUPABASE_CONFIG.url, window.SUPABASE_CONFIG.publishableKey, {
-      auth: { storage: window.sessionStorage, persistSession: true, autoRefreshToken: true, detectSessionInUrl: true }
-    });
+    if (installed) return true;
+    db = window.getPlaylistSupabaseClient?.();
+    if (!db) return false;
     installed = true;
     patchLoadSongs();
     setTimeout(decorateSongs, 900);
