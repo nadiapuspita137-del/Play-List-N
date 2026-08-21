@@ -82,7 +82,8 @@
     document.getElementById('nestedAdminError').classList.add('hidden');
     document.getElementById('nestedAdminForm').classList.add('hidden');
     try {
-      if (!db) db = supabase.createClient(window.SUPABASE_CONFIG.url, window.SUPABASE_CONFIG.publishableKey,{auth:{storage:sessionStorage,persistSession:true,autoRefreshToken:true}});
+      if (!db) db = window.getPlaylistSupabaseClient?.();
+      if (!db) throw new Error('Koneksi database belum siap. Muat ulang halaman.');
       const [{data,error},{count}] = await Promise.all([
         db.from('profiles').select('*').eq('id',id).eq('role','editor').maybeSingle(),
         db.from('songs').select('id',{count:'exact',head:true}).eq('owner_id',id),
