@@ -7,7 +7,7 @@
     <link rel="icon" type="image/png" href="admin-favicon.png" />
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdn.jsdelivr.net/npm/tus-js-client@4/dist/tus.min.js"></script>
-    <script src="supabase-config.js?v=8"></script>
+    <script src="supabase-config.js?v=9"></script>
     <style>
       * {
         box-sizing: border-box;
@@ -1155,15 +1155,7 @@
     </main>
     <script>
       const cfg = window.SUPABASE_CONFIG,
-        db = supabase.createClient(cfg.url, cfg.publishableKey, {
-          auth: {
-            storage: window.sessionStorage,
-            persistSession: true,
-            autoRefreshToken: true,
-            detectSessionInUrl: true,
-          },
-          global: { headers: { "x-client-info": "playlist-admin" } },
-        });
+        db = window.getPlaylistSupabaseClient();
       let songs = [],
         statsRows = [],
         currentUser = null,
@@ -1603,14 +1595,7 @@
       }
       $("adminForm").onsubmit = async (e) => {
         e.preventDefault();
-        const secondary = supabase.createClient(cfg.url, cfg.publishableKey, {
-          auth: {
-            persistSession: false,
-            autoRefreshToken: false,
-            detectSessionInUrl: false,
-          },
-        });
-        const { data, error } = await secondary.auth.signUp({
+        const { data, error } = await window.createAuthUserWithoutSession({
           email: $("newAdminEmail").value,
           password: $("newAdminPassword").value,
         });
@@ -1989,6 +1974,6 @@
       }
       ensureAdmin();
     </script>
-    <script src="admin-nested-detail.js?v=10"></script>
+    <script src="admin-nested-detail.js?v=11"></script>
   </body>
 </html>
