@@ -10,7 +10,7 @@ window.SUPABASE_CONFIG = {
     'admin-quota-fix.js',
     'admin-uploader.js',
     'admin-download.js',
-    'admin-adminlist-clean.js'
+    'admin-adminlist-clean.js?v=3'
   ];
   scripts.forEach((src) => {
     const script = document.createElement('script');
