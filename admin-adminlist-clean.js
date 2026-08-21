@@ -15,7 +15,7 @@
     #ownerTools .admin-avatar{position:static!important;width:42px!important;height:42px!important;margin:0!important}
     #ownerTools .admin-row>div:nth-child(2){grid-column:auto!important;min-width:0!important;padding:0!important}
     #ownerTools .admin-email,#ownerTools .admin-row .muted{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-    #ownerTools .admin-row>.admin-actions,#ownerTools .admin-row>.permission-row-editor{display:none!important}
+    #ownerTools .admin-row>.admin-actions,#ownerTools .admin-row .permission-row-editor,#ownerTools .admin-row .admin-access-wrap{display:none!important}
     #ownerTools .admin-manage-btn{min-width:116px;white-space:nowrap}
     #adminDetailScreen{display:none}
     #ownerTools.detail-open>.admin-master-toolbar,#ownerTools.detail-open>#adminForm,#ownerTools.detail-open>#adminMsg,#ownerTools.detail-open>#adminList{display:none!important}
@@ -120,7 +120,12 @@
     if (!owner) return;
     const info = row.querySelector(':scope > div:nth-child(2)');
     const actions = row.querySelector(':scope > .admin-actions');
-    const editor = row.querySelector(':scope > .permission-row-editor');
+    const editor = row.querySelector('.permission-row-editor');
+    const legacyWrap = row.querySelector('.admin-access-wrap');
+    if (legacyWrap && editor) {
+      legacyWrap.parentNode?.insertBefore(editor, legacyWrap);
+      legacyWrap.remove();
+    }
     const name = info?.querySelector('b')?.textContent || 'Admin';
     const email = info?.querySelector('.admin-email')?.textContent || '';
     const meta = info?.querySelector('.muted')?.textContent || '';
@@ -159,9 +164,15 @@
     if (row.dataset.masterDetail === '1') return;
     const info = row.querySelector(':scope > div:nth-child(2)');
     const actions = row.querySelector(':scope > .admin-actions');
-    const editor = row.querySelector(':scope > .permission-row-editor');
+    const editor = row.querySelector('.permission-row-editor');
     if (!info || !actions || !editor) return;
+    const legacyWrap = row.querySelector('.admin-access-wrap');
+    if (legacyWrap) {
+      row.appendChild(editor);
+      legacyWrap.remove();
+    }
     row.dataset.masterDetail = '1';
+    row.dataset.dropdownReady = '1';
     const button = document.createElement('button');
     button.type = 'button';
     button.className = 'btn ghost admin-manage-btn';
