@@ -1,0 +1,11 @@
+{
+  "name": "play-list-n",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --test tests/smoke.test.mjs"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}
