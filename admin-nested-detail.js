@@ -215,7 +215,7 @@
       }
       document.getElementById('ownerAdminPassword').value = '';
       document.getElementById('ownerAdminPasswordConfirm').value = '';
-      output.textContent = 'Password admin berhasil diperbarui.';
+      output.textContent = 'Password admin berhasil diperbarui dan sesi panelnya telah dihentikan.';
       output.style.color = '#8fffc5';
     } catch (error) {
       output.textContent = error.message || 'Password admin gagal diperbarui.';
