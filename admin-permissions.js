@@ -89,19 +89,6 @@
     box.className = 'permission-editor wide';
     box.innerHTML = `<div class="permission-title"><b>Akses admin</b><small>Pilih menu dan kemampuan yang boleh digunakan admin ini.</small></div><div class="permission-grid">${Object.entries(LABELS).map(([key, [label, help]]) => `<label class="permission-item"><input type="checkbox" data-new-permission="${key}" checked><span><b>${label}</b><small>${help}</small></span></label>`).join('')}</div>`;
     form.insertBefore(box, form.querySelector('button[type="submit"]') || form.lastElementChild);
-    form.addEventListener('submit', async e => {
-      e.preventDefault(); e.stopImmediatePropagation();
-      if (!profile || profile.role !== 'super_admin') return;
-      const permissions = {};
-      Object.keys(LABELS).forEach(key => permissions[key] = !!form.querySelector(`[data-new-permission="${key}"]`)?.checked);
-      const { data, error } = await window.createAuthUserWithoutSession({ email: document.getElementById('newAdminEmail').value, password: document.getElementById('newAdminPassword').value });
-      if (error || !data.user) return showAdminPermissionMsg(error?.message || 'Gagal membuat akun.', true);
-      const { error: profileError } = await db.from('profiles').insert({ id: data.user.id, role: 'editor', display_name: document.getElementById('newAdminName').value, email: document.getElementById('newAdminEmail').value.trim().toLowerCase(), song_quota: Number(document.getElementById('newAdminQuota').value), is_active: true, permissions });
-      if (profileError) return showAdminPermissionMsg(profileError.message, true);
-      showAdminPermissionMsg('Admin berhasil dibuat dengan akses yang dipilih.');
-      form.reset(); form.querySelectorAll('[data-new-permission]').forEach(x => x.checked = true);
-      if (typeof window.loadAdmins === 'function') window.loadAdmins();
-    }, true);
   }
 
   function showAdminPermissionMsg(text, bad = false) {
