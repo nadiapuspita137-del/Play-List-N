@@ -55,12 +55,13 @@
 
   function ensureLayout() {
     const owner = document.getElementById('ownerTools');
-    const top = owner?.querySelector(':scope > .top');
+    const existingToolbar = owner?.querySelector(':scope > .admin-master-toolbar');
+    const top = existingToolbar?.querySelector('.top') || owner?.querySelector(':scope > .top');
     const form = document.getElementById('adminForm');
     const list = document.getElementById('adminList');
-    if (!owner || !top || !form || !list) return null;
+    if (!owner || !form || !list || (!existingToolbar && !top)) return null;
 
-    if (!owner.querySelector('.admin-master-toolbar')) {
+    if (!existingToolbar) {
       const toolbar = document.createElement('div');
       toolbar.className = 'admin-master-toolbar';
       top.parentNode.insertBefore(toolbar, top);
