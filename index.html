@@ -347,13 +347,31 @@
             const secs = Math.floor(seconds % 60);
             return `${mins}:${secs < 10 ? '0' : ''}${secs}`;
         }
+        function createIcon(className) {
+            const icon = document.createElement('i');
+            icon.className = className;
+            return icon;
+        }
+        function safeMediaUrl(value, fallback = '') {
+            if (typeof value !== 'string' || !value.trim()) return fallback;
+            try {
+                const url = new URL(value.trim(), window.location.href);
+                const allowedProtocol = ['http:', 'https:', 'blob:'].includes(url.protocol)
+                    || (window.location.protocol === 'file:' && url.protocol === 'file:');
+                return allowedProtocol ? value.trim() : fallback;
+            } catch (_) {
+                return fallback;
+            }
+        }
         function showLoading() { loadingOverlay.classList.remove('opacity-0','pointer-events-none'); loadingOverlay.classList.add('opacity-100','pointer-events-auto'); }
         function hideLoading() { setTimeout(() => { loadingOverlay.classList.add('opacity-0','pointer-events-none'); loadingOverlay.classList.remove('opacity-100','pointer-events-auto'); }, 300); }
         function getSongById(id) { return masterSongs.find(s => s.id === id); }
         function setAudioStatus(state, text) {
             audioStatus.className = `audio-status ${state}`;
-            const icon = state === 'loading' ? '<i class="status-spinner"></i>' : state === 'error' ? '<i class="fas fa-triangle-exclamation"></i>' : state === 'ready' ? '<i class="fas fa-wave-square"></i>' : '<i class="fas fa-circle text-[6px]"></i>';
-            audioStatus.innerHTML = `${icon}<span>${text}</span>`;
+            const iconClass = state === 'loading' ? 'status-spinner' : state === 'error' ? 'fas fa-triangle-exclamation' : state === 'ready' ? 'fas fa-wave-square' : 'fas fa-circle text-[6px]';
+            const label = document.createElement('span');
+            label.textContent = String(text ?? '');
+            audioStatus.replaceChildren(createIcon(iconClass), label);
         }
         async function recordEvent(songId,eventType){if(!supabaseClient||typeof songId!=='string')return;try{await supabaseClient.from('song_events').insert({song_id:songId,event_type:eventType,session_id:eventSession})}catch(e){console.warn('Statistik:',e.message)}}
         async function drawWaveform(song,url){waveformSongId=song.id;waveCtx.clearRect(0,0,640,124);waveCtx.fillStyle='#35423e';waveCtx.fillText('Memuat waveform…',16,65);try{const data=await (await fetch(url)).arrayBuffer(),ctx=new AudioContext(),decoded=await ctx.decodeAudioData(data),samples=decoded.getChannelData(0),bars=110,step=Math.floor(samples.length/bars);waveCtx.clearRect(0,0,640,124);for(let i=0;i<bars;i++){let peak=0;for(let j=0;j<step;j+=Math.max(1,Math.floor(step/80)))peak=Math.max(peak,Math.abs(samples[i*step+j]||0));const h=Math.max(4,peak*106),x=i*(640/bars);waveCtx.fillStyle='#00dc7c';waveCtx.fillRect(x,62-h/2,3.8,h)}ctx.close()}catch(e){waveCtx.clearRect(0,0,640,124)}}
@@ -365,7 +383,7 @@
             }).sort((a,b)=>a.time-b.time);
         }
         function normalizeMediaUrl(url) {
-            if (!url) return url;
+            if (typeof url !== 'string' || !url.trim()) return '';
             return url.replace(/^https:\/\/nadiapuspita137-del\.github\.io\/Play-List-N\//, '');
         }
         function updateLyrics() {
@@ -380,7 +398,18 @@
                 supabaseClient=supabase.createClient(cfg.url,cfg.publishableKey);
                 const {data,error}=await supabaseClient.from('songs').select('*').eq('is_active',true).order('sort_order');
                 if (error) throw error;
-                if (data?.length) masterSongs=data.map((s,i)=>({id:s.id,title:s.title,artist:s.artist,album:s.album,cover:normalizeMediaUrl(s.cover_url)||'favi.jpg',url:s.audio_parts?.length?null:normalizeMediaUrl(s.audio_url),parts:s.audio_parts?.map(normalizeMediaUrl)||null,duration:s.duration_seconds?formatTime(s.duration_seconds):'--:--',lyrics_lrc:s.lyrics_lrc||'',sort_order:s.sort_order??i}));
+                if (data?.length) masterSongs=data.map((s,i)=>({
+                    id: String(s.id ?? ''),
+                    title: String(s.title ?? 'Tanpa judul'),
+                    artist: String(s.artist ?? 'Artis tidak diketahui'),
+                    album: String(s.album ?? ''),
+                    cover: safeMediaUrl(normalizeMediaUrl(s.cover_url), 'favi.jpg'),
+                    url: Array.isArray(s.audio_parts) && s.audio_parts.length ? null : safeMediaUrl(normalizeMediaUrl(s.audio_url)),
+                    parts: Array.isArray(s.audio_parts) ? s.audio_parts.map(normalizeMediaUrl).filter(Boolean) : null,
+                    duration: s.duration_seconds ? formatTime(s.duration_seconds) : '--:--',
+                    lyrics_lrc: String(s.lyrics_lrc ?? ''),
+                    sort_order: s.sort_order ?? i
+                }));
             } catch(error) { console.warn('Supabase belum siap, memakai koleksi lokal:',error.message); }
         }
         function getCurrentDisplaySongs() {
@@ -450,14 +479,21 @@
 
         // Render tabs playlist (tanpa tombol hapus untuk permanent)
         function renderPlaylistTabs() {
-            playlistTabsContainer.innerHTML = '';
+            playlistTabsContainer.replaceChildren();
             playlists.forEach(pl => {
                 const tab = document.createElement('div');
                 tab.className = `playlist-tab text-sm ${currentPlaylistId === pl.id ? 'active' : ''}`;
-                if (pl.permanent) {
-                    tab.innerHTML = `<span>${pl.name}</span>`;
-                } else {
-                    tab.innerHTML = `<span>${pl.name}</span><i class="fas fa-trash-alt delete-playlist-btn" data-id="${pl.id}" style="font-size: 10px; cursor: pointer;"></i>`;
+                const name = document.createElement('span');
+                name.textContent = String(pl.name ?? 'Tanpa nama');
+                tab.appendChild(name);
+                if (!pl.permanent) {
+                    const deleteBtn = createIcon('fas fa-trash-alt delete-playlist-btn');
+                    deleteBtn.dataset.id = String(pl.id);
+                    deleteBtn.style.fontSize = '10px';
+                    deleteBtn.style.cursor = 'pointer';
+                    deleteBtn.setAttribute('role', 'button');
+                    deleteBtn.setAttribute('aria-label', `Hapus playlist ${String(pl.name ?? '')}`);
+                    tab.appendChild(deleteBtn);
                 }
                 tab.addEventListener('click', (e) => {
                     if (e.target.classList.contains('delete-playlist-btn')) return;
@@ -491,28 +527,53 @@
         function refreshPlaylistView() {
             const songs = getCurrentDisplaySongs();
             songCountSpan.textContent = `${songs.length} Lagu`;
-            playlistContainer.innerHTML = '';
+            playlistContainer.replaceChildren();
             songs.forEach((song, idx) => {
                 const isActive = (currentPlayingSongId === song.id);
                 const item = document.createElement('div');
                 item.className = `playlist-item flex items-center gap-4 p-3 rounded-xl cursor-pointer transition-all duration-300 ${isActive ? 'active' : ''}`;
-                item.innerHTML = `
-                    <div class="w-12 h-12 rounded-lg overflow-hidden flex-shrink-0">
-                        <img src="${song.cover}" class="w-full h-full object-cover" alt="cover">
-                    </div>
-                    <div class="flex-1 min-w-0">
-                        <div class="text-white font-medium truncate">${song.title}</div>
-                        <div class="text-gray-500 text-sm truncate">${song.artist}</div>
-                    </div>
-                    <div class="text-gray-600 text-sm">${song.duration}</div>
-                    <button class="download-song-btn text-gray-400 hover:text-pink-500 transition ml-1 w-8 h-8 rounded-full" data-song-id="${song.id}" title="Download ${song.title}" aria-label="Download ${song.title}">
-                        <i class="fas fa-download"></i>
-                    </button>
-                    <button class="add-to-playlist-btn text-gray-400 hover:text-green-500 transition ml-2" data-song-id="${song.id}" title="Tambah ke playlist lain">
-                        <i class="fas fa-plus-circle"></i>
-                    </button>
-                    ${isActive && isPlaying ? '<i class="fas fa-volume-up text-green-500 ml-2"></i>' : ''}
-                `;
+
+                const coverWrap = document.createElement('div');
+                coverWrap.className = 'w-12 h-12 rounded-lg overflow-hidden flex-shrink-0';
+                const cover = document.createElement('img');
+                cover.src = safeMediaUrl(song.cover, 'favi.jpg');
+                cover.className = 'w-full h-full object-cover';
+                cover.alt = '';
+                cover.loading = 'lazy';
+                coverWrap.appendChild(cover);
+
+                const info = document.createElement('div');
+                info.className = 'flex-1 min-w-0';
+                const title = document.createElement('div');
+                title.className = 'text-white font-medium truncate';
+                title.textContent = String(song.title ?? 'Tanpa judul');
+                const artist = document.createElement('div');
+                artist.className = 'text-gray-500 text-sm truncate';
+                artist.textContent = String(song.artist ?? 'Artis tidak diketahui');
+                info.append(title, artist);
+
+                const duration = document.createElement('div');
+                duration.className = 'text-gray-600 text-sm';
+                duration.textContent = String(song.duration ?? '--:--');
+
+                const downloadBtn = document.createElement('button');
+                downloadBtn.type = 'button';
+                downloadBtn.className = 'download-song-btn text-gray-400 hover:text-pink-500 transition ml-1 w-8 h-8 rounded-full';
+                downloadBtn.dataset.songId = String(song.id);
+                downloadBtn.title = `Download ${String(song.title ?? '')}`;
+                downloadBtn.setAttribute('aria-label', downloadBtn.title);
+                downloadBtn.appendChild(createIcon('fas fa-download'));
+
+                const addBtn = document.createElement('button');
+                addBtn.type = 'button';
+                addBtn.className = 'add-to-playlist-btn text-gray-400 hover:text-green-500 transition ml-2';
+                addBtn.dataset.songId = String(song.id);
+                addBtn.title = 'Tambah ke playlist lain';
+                addBtn.setAttribute('aria-label', addBtn.title);
+                addBtn.appendChild(createIcon('fas fa-plus-circle'));
+
+                item.append(coverWrap, info, duration, downloadBtn, addBtn);
+                if (isActive && isPlaying) item.appendChild(createIcon('fas fa-volume-up text-green-500 ml-2'));
                 item.addEventListener('click', (e) => {
                     if (e.target.closest('.add-to-playlist-btn, .download-song-btn')) return;
                     if (currentPlayingSongId !== song.id) {
@@ -522,12 +583,10 @@
                         if (isPlaying) audio.play().catch(e=>console.log);
                     }
                 });
-                const addBtn = item.querySelector('.add-to-playlist-btn');
                 addBtn.addEventListener('click', (e) => {
                     e.stopPropagation();
                     showPlaylistSelectionModal(song.id);
                 });
-                const downloadBtn = item.querySelector('.download-song-btn');
                 downloadBtn.addEventListener('click', (e) => {
                     e.stopPropagation();
                     downloadSong(song.id, downloadBtn);
@@ -537,14 +596,19 @@
         }
 
         function showPlaylistSelectionModal(songId) {
-            playlistListContainer.innerHTML = '';
+            playlistListContainer.replaceChildren();
             if (playlists.length === 0) {
-                playlistListContainer.innerHTML = '<div class="text-gray-400 text-center">Belum ada playlist. Buat dulu yuk!</div>';
+                const emptyState = document.createElement('div');
+                emptyState.className = 'text-gray-400 text-center';
+                emptyState.textContent = 'Belum ada playlist. Buat dulu yuk!';
+                playlistListContainer.appendChild(emptyState);
             } else {
                 playlists.forEach(pl => {
                     const plItem = document.createElement('div');
                     plItem.className = 'flex justify-between items-center p-2 rounded-lg bg-gray-800/50 cursor-pointer hover:bg-gray-700 transition';
-                    plItem.innerHTML = `<span>${pl.name}</span><i class="fas fa-folder-open text-gray-400"></i>`;
+                    const name = document.createElement('span');
+                    name.textContent = String(pl.name ?? 'Tanpa nama');
+                    plItem.append(name, createIcon('fas fa-folder-open text-gray-400'));
                     plItem.addEventListener('click', () => {
                         addSongToPlaylist(songId, pl.id);
                         selectPlaylistModal.classList.remove('active');
@@ -567,7 +631,7 @@
             if (currentPlaylistId === playlistId) refreshPlaylistView();
             const toast = document.createElement('div');
             toast.className = 'fixed bottom-20 right-4 bg-green-500 text-white px-4 py-2 rounded-lg shadow-lg z-50';
-            toast.innerHTML = `<i class="fas fa-check mr-2"></i> Lagu ditambahkan ke "${playlist.name}"`;
+            toast.append(createIcon('fas fa-check mr-2'), document.createTextNode(` Lagu ditambahkan ke "${String(playlist.name ?? '')}"`));
             document.body.appendChild(toast);
             setTimeout(() => toast.remove(), 2000);
         }
@@ -575,9 +639,15 @@
         // ========== PERBAIKAN AUTO-PLAY NEXT ==========
         const assembledSongUrls = new Map();
         async function resolveSongUrl(song) {
-            if (song.url) return song.url;
+            if (song.url) {
+                const safeUrl = safeMediaUrl(song.url);
+                if (!safeUrl) throw new Error('URL audio tidak valid');
+                return safeUrl;
+            }
             if (assembledSongUrls.has(song.id)) return assembledSongUrls.get(song.id);
-            const responses = await Promise.all(song.parts.map(part => fetch(part)));
+            const parts = song.parts?.map(part => safeMediaUrl(part)) || [];
+            if (!parts.length || parts.some(part => !part)) throw new Error('URL bagian audio tidak valid');
+            const responses = await Promise.all(parts.map(part => fetch(part)));
             if (responses.some(response => !response.ok)) throw new Error('Bagian audio tidak lengkap');
             const chunks = await Promise.all(responses.map(response => response.arrayBuffer()));
             const objectUrl = URL.createObjectURL(new Blob(chunks, { type: 'audio/mpeg' }));
@@ -588,9 +658,8 @@
         async function downloadSong(songId, button) {
             const song = getSongById(songId);
             if (!song || button.disabled) return;
-            const originalIcon = button.innerHTML;
             button.disabled = true;
-            button.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+            button.replaceChildren(createIcon('fas fa-spinner fa-spin'));
             button.setAttribute('aria-label', `Menyiapkan download ${song.title}`);
             try {
                 const sourceUrl = await resolveSongUrl(song);
@@ -606,13 +675,13 @@
                 recordEvent(song.id,'download');
                 link.remove();
                 setTimeout(() => URL.revokeObjectURL(downloadUrl), 1500);
-                button.innerHTML = '<i class="fas fa-check text-green-500"></i>';
-                setTimeout(() => { button.innerHTML = originalIcon; }, 1600);
+                button.replaceChildren(createIcon('fas fa-check text-green-500'));
+                setTimeout(() => { button.replaceChildren(createIcon('fas fa-download')); }, 1600);
             } catch (error) {
                 console.error('Download error:', error);
-                button.innerHTML = '<i class="fas fa-triangle-exclamation text-red-500"></i>';
+                button.replaceChildren(createIcon('fas fa-triangle-exclamation text-red-500'));
                 alert(`Gagal mengunduh ${song.title}. Coba lagi.`);
-                setTimeout(() => { button.innerHTML = originalIcon; }, 1600);
+                setTimeout(() => { button.replaceChildren(createIcon('fas fa-download')); }, 1600);
             } finally {
                 button.disabled = false;
                 button.setAttribute('aria-label', `Download ${song.title}`);
@@ -630,7 +699,7 @@
             audio.pause();
             songTitle.textContent = song.title;
             songArtist.textContent = song.artist;
-            coverArt.src = song.cover;
+            coverArt.src = safeMediaUrl(song.cover, 'favi.jpg');
             activeLyrics = parseLrc(song.lyrics_lrc || '');
             updateLyrics();
             progressFill.style.width = '0%';
@@ -691,11 +760,11 @@
             playBtn.setAttribute('aria-label', playing ? 'Jeda' : 'Putar');
             document.title = playing ? `▶ ${songTitle.textContent} | Play List Ngawi` : 'Play List Ngawi | Music Player';
             if (playing) {
-                playBtn.innerHTML = '<i class="fas fa-pause text-2xl"></i>';
+                playBtn.replaceChildren(createIcon('fas fa-pause text-2xl'));
                 playingIndicator.classList.remove('hidden');
                 document.querySelector('.cover-art')?.classList.add('playing');
             } else {
-                playBtn.innerHTML = '<i class="fas fa-play text-2xl"></i>';
+                playBtn.replaceChildren(createIcon('fas fa-play text-2xl'));
                 playingIndicator.classList.add('hidden');
                 document.querySelector('.cover-art')?.classList.remove('playing');
             }
@@ -813,7 +882,7 @@
             if (sleepTimeout) clearTimeout(sleepTimeout);
             const badge = document.getElementById('sleepBadge');
             badge.classList.remove('hidden');
-            badge.innerHTML = `<i class="fas fa-bed mr-1"></i> Tidur dalam ${minutes} menit`;
+            badge.replaceChildren(createIcon('fas fa-bed mr-1'), document.createTextNode(` Tidur dalam ${Number(minutes)} menit`));
             sleepTimeout = setTimeout(() => {
                 audio.pause();
                 isPlaying = false;
