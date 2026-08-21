@@ -856,6 +856,9 @@
             <button id="navAdmins" class="nav-item hidden" data-page="admins">
               <span class="nav-icon">♙</span>Kelola Admin
             </button>
+            <button class="nav-item" data-page="account-security">
+              <span class="nav-icon">⌘</span>Ubah Password
+            </button>
           </nav>
           <div class="sidebar-bottom">
             <a href="index.html"
@@ -957,6 +960,47 @@
               </form>
               <div id="adminMsg" class="notice hidden"></div>
               <div id="adminList" style="margin-top: 14px"></div>
+            </section>
+            <section class="card page-view" data-view="account-security">
+              <div class="top">
+                <div>
+                  <h2>Ubah Password</h2>
+                  <p class="muted">
+                    Demi keamanan, setiap Owner dan Admin hanya dapat mengubah
+                    password akun yang sedang digunakan.
+                  </p>
+                </div>
+              </div>
+              <form id="passwordForm" class="grid" autocomplete="off">
+                <label class="field wide"
+                  >Password saat ini<input
+                    id="currentPassword"
+                    type="password"
+                    minlength="8"
+                    autocomplete="current-password"
+                    required
+                /></label>
+                <label class="field"
+                  >Password baru<input
+                    id="newPassword"
+                    type="password"
+                    minlength="8"
+                    autocomplete="new-password"
+                    required
+                /></label>
+                <label class="field"
+                  >Konfirmasi password baru<input
+                    id="confirmPassword"
+                    type="password"
+                    minlength="8"
+                    autocomplete="new-password"
+                    required
+                /></label>
+                <button id="changePasswordBtn" class="btn primary wide">
+                  Simpan Password Baru
+                </button>
+              </form>
+              <div id="passwordMsg" class="notice hidden"></div>
             </section>
             <section class="card page-view" data-view="statistics">
               <div class="top">
@@ -1212,6 +1256,7 @@
         "song-form": "TAMBAH LAGU",
         songs: "DAFTAR LAGU",
         admins: "KELOLA ADMIN",
+        "account-security": "UBAH PASSWORD",
       };
       function openPage(page) {
         document
@@ -1275,6 +1320,57 @@
         sessionStorage.removeItem("playlist_admin_session");
         await db.auth.signOut();
         location.reload();
+      };
+      $("passwordForm").onsubmit = async (e) => {
+        e.preventDefault();
+        const currentPassword = $("currentPassword").value,
+          newPassword = $("newPassword").value,
+          confirmPassword = $("confirmPassword").value,
+          button = $("changePasswordBtn");
+        $("passwordMsg").classList.add("hidden");
+        if (newPassword.length < 8)
+          return msg(
+            "passwordMsg",
+            "Password baru minimal terdiri dari 8 karakter.",
+            true,
+          );
+        if (newPassword !== confirmPassword)
+          return msg(
+            "passwordMsg",
+            "Konfirmasi password baru tidak sama.",
+            true,
+          );
+        if (newPassword === currentPassword)
+          return msg(
+            "passwordMsg",
+            "Password baru harus berbeda dari password saat ini.",
+            true,
+          );
+        if (!currentUser?.email)
+          return msg("passwordMsg", "Email akun tidak ditemukan.", true);
+        button.disabled = true;
+        try {
+          const { error: verifyError } = await db.auth.signInWithPassword({
+            email: currentUser.email,
+            password: currentPassword,
+          });
+          if (verifyError)
+            throw new Error("Password saat ini tidak benar.");
+          const { error: updateError } = await db.auth.updateUser({
+            password: newPassword,
+          });
+          if (updateError) throw updateError;
+          e.target.reset();
+          msg("passwordMsg", "Password berhasil diperbarui.");
+        } catch (error) {
+          msg(
+            "passwordMsg",
+            error.message || "Password gagal diperbarui.",
+            true,
+          );
+        } finally {
+          button.disabled = false;
+        }
       };
       $("refreshBtn").onclick = loadSongs;
       function localMediaUrl(url) {
