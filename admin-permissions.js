@@ -125,21 +125,27 @@
   function patchAdminRows() {
     if (!profile || profile.role !== 'super_admin') return;
     document.querySelectorAll('#adminList .admin-row').forEach(row => {
-      if (row.querySelector('.permission-editor')) return;
+      if (row.querySelector('.permission-editor') || row.dataset.permissionEditorState === 'loading') return;
       const input = row.querySelector('input[id^="quota-"]');
       const id = input?.id?.replace('quota-', '');
       if (!id) return;
+      row.dataset.permissionEditorState = 'loading';
       loadEditorPermissions(row, id);
     });
   }
 
   async function loadEditorPermissions(row, id) {
     const { data } = await db.from('profiles').select('permissions').eq('id', id).maybeSingle();
+    if (!row.isConnected || row.querySelector('.permission-editor')) {
+      row.dataset.permissionEditorState = row.querySelector('.permission-editor') ? 'ready' : '';
+      return;
+    }
     const permissions = { ...DEFAULTS, ...(data?.permissions || {}) };
     const box = document.createElement('div');
     box.className = 'permission-editor permission-row-editor';
     box.innerHTML = `<div class="permission-row-summary"><div><b>Hak akses admin</b><small>${Object.entries(permissions).filter(([, value]) => value).length}/${Object.keys(LABELS).length} akses aktif</small></div><button type="button" class="btn ghost permission-toggle" aria-expanded="false">Atur Akses</button></div><div class="permission-row-body hidden"><div class="permission-title"><b>Hak akses</b><small>Owner bisa mengubah akses kapan saja.</small></div><div class="permission-grid">${Object.entries(LABELS).map(([key, [label, help]]) => `<label class="permission-item"><input type="checkbox" data-permission="${key}" ${permissions[key] ? 'checked' : ''}><span><b>${label}</b><small>${help}</small></span></label>`).join('')}</div><button type="button" class="btn primary permission-save">Simpan Akses</button></div>`;
     row.appendChild(box);
+    row.dataset.permissionEditorState = 'ready';
 
     const toggle = box.querySelector('.permission-toggle');
     const body = box.querySelector('.permission-row-body');
