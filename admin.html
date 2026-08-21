@@ -1602,24 +1602,53 @@
       window.loadAdmins = loadAdmins;
       $("adminForm").onsubmit = async (e) => {
         e.preventDefault();
-        const { data, error } = await window.createAuthUserWithoutSession({
-          email: $("newAdminEmail").value,
-          password: $("newAdminPassword").value,
-        });
-        if (error || !data.user)
-          return msg("adminMsg", error?.message || "Gagal membuat akun", true);
-        const { error: profileError } = await db.from("profiles").insert({
-          id: data.user.id,
-          role: "editor",
-          display_name: $("newAdminName").value,
-          email: $("newAdminEmail").value.trim().toLowerCase(),
-          song_quota: +$("newAdminQuota").value,
-          is_active: true,
-        });
-        if (profileError) return msg("adminMsg", profileError.message, true);
-        msg("adminMsg", "Admin terbatas berhasil dibuat.");
-        e.target.reset();
-        loadAdmins();
+        if (currentProfile?.role !== "super_admin")
+          return msg("adminMsg", "Hanya Owner yang boleh membuat akun admin.", true);
+
+        const form = e.currentTarget,
+          submitButton = form.querySelector('button[type="submit"], button:not([type])'),
+          email = $("newAdminEmail").value.trim().toLowerCase(),
+          password = $("newAdminPassword").value,
+          quota = Number($("newAdminQuota").value),
+          permissionInputs = [...form.querySelectorAll("[data-new-permission]")];
+        if (!Number.isInteger(quota) || quota < 0)
+          return msg("adminMsg", "Kuota harus berupa angka 0 atau lebih.", true);
+        if (submitButton?.disabled) return;
+
+        const permissions = Object.fromEntries(
+          permissionInputs.map((input) => [input.dataset.newPermission, input.checked]),
+        );
+        if (submitButton) submitButton.disabled = true;
+        try {
+          const { data, error } = await window.createAuthUserWithoutSession({
+            email,
+            password,
+          });
+          if (error || !data?.user)
+            return msg("adminMsg", error?.message || "Gagal membuat akun", true);
+
+          const profile = {
+            id: data.user.id,
+            role: "editor",
+            display_name: $("newAdminName").value.trim(),
+            email,
+            song_quota: quota,
+            is_active: true,
+          };
+          if (permissionInputs.length) profile.permissions = permissions;
+          const { error: profileError } = await db.from("profiles").insert(profile);
+          if (profileError)
+            return msg("adminMsg", `Akun dibuat, tetapi profil gagal disimpan: ${profileError.message}`, true);
+
+          form.reset();
+          permissionInputs.forEach((input) => { input.checked = true; });
+          await loadAdmins();
+          msg("adminMsg", "Admin terbatas berhasil dibuat.");
+        } catch (error) {
+          msg("adminMsg", error.message || "Gagal membuat akun", true);
+        } finally {
+          if (submitButton) submitButton.disabled = false;
+        }
       };
       window.toggleAdmin = async (id, state) => {
         const { error } = await db
