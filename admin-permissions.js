@@ -28,10 +28,8 @@
   }
 
   async function init() {
-    if (!window.SUPABASE_CONFIG || !window.supabase) return;
-    db = supabase.createClient(window.SUPABASE_CONFIG.url, window.SUPABASE_CONFIG.publishableKey, {
-      auth: { storage: window.sessionStorage, persistSession: true, autoRefreshToken: true, detectSessionInUrl: true },
-    });
+    db = window.getPlaylistSupabaseClient?.();
+    if (!db) return;
     await syncProfile();
     setInterval(syncProfile, 5000);
     installGuards();
@@ -94,10 +92,9 @@
     form.addEventListener('submit', async e => {
       e.preventDefault(); e.stopImmediatePropagation();
       if (!profile || profile.role !== 'super_admin') return;
-      const secondary = supabase.createClient(window.SUPABASE_CONFIG.url, window.SUPABASE_CONFIG.publishableKey, { auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false } });
       const permissions = {};
       Object.keys(LABELS).forEach(key => permissions[key] = !!form.querySelector(`[data-new-permission="${key}"]`)?.checked);
-      const { data, error } = await secondary.auth.signUp({ email: document.getElementById('newAdminEmail').value, password: document.getElementById('newAdminPassword').value });
+      const { data, error } = await window.createAuthUserWithoutSession({ email: document.getElementById('newAdminEmail').value, password: document.getElementById('newAdminPassword').value });
       if (error || !data.user) return showAdminPermissionMsg(error?.message || 'Gagal membuat akun.', true);
       const { error: profileError } = await db.from('profiles').insert({ id: data.user.id, role: 'editor', display_name: document.getElementById('newAdminName').value, email: document.getElementById('newAdminEmail').value.trim().toLowerCase(), song_quota: Number(document.getElementById('newAdminQuota').value), is_active: true, permissions });
       if (profileError) return showAdminPermissionMsg(profileError.message, true);
