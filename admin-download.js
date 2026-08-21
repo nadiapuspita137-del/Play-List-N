@@ -1,7 +1,6 @@
 (() => {
   // Tombol download khusus panel admin.
-  // Tidak ada pembatas owner di sini: semua lagu yang tampil di daftar admin
-  // dapat diunduh, termasuk lagu berstatus "Dilindungi".
+  // Owner boleh mengunduh semua lagu. Admin/petugas hanya lagu miliknya.
 
   const localMediaUrl = (url) =>
     (url || '').replace(
@@ -16,21 +15,22 @@
       .trim()
       .slice(0, 150) || 'lagu';
 
-  let adminDb = null;
-
   function getAdminDb() {
-    if (adminDb) return adminDb;
-    const cfg = window.SUPABASE_CONFIG;
-    if (!cfg || !window.supabase?.createClient) return null;
-    adminDb = window.supabase.createClient(cfg.url, cfg.publishableKey, {
-      auth: {
-        storage: window.sessionStorage,
-        persistSession: true,
-        autoRefreshToken: true,
-        detectSessionInUrl: false,
-      },
-    });
-    return adminDb;
+    return window.getPlaylistSupabaseClient?.() || null;
+  }
+
+  async function getDownloadActor(db) {
+    const { data: { session }, error: sessionError } = await db.auth.getSession();
+    if (sessionError || !session?.user) throw new Error('Sesi login tidak ditemukan.');
+
+    const { data: profile, error: profileError } = await db
+      .from('profiles')
+      .select('id,role,is_active')
+      .eq('id', session.user.id)
+      .maybeSingle();
+    if (profileError) throw profileError;
+    if (!profile?.is_active) throw new Error('Akun tidak aktif atau tidak ditemukan.');
+    return profile;
   }
 
   async function getAudioBlob(song) {
@@ -81,15 +81,21 @@
     button.textContent = 'Mengunduh…';
 
     try {
-      // Sengaja tidak mengecek owner/allowed. Admin boleh download semua lagu.
-      const { data: song, error } = await db
+      const actor = await getDownloadActor(db);
+      let songQuery = db
         .from('songs')
-        .select('id,title,artist,audio_url,audio_parts')
-        .eq('id', songId)
-        .maybeSingle();
+        .select('id,title,artist,audio_url,audio_parts,owner_id')
+        .eq('id', songId);
+      if (actor.role !== 'super_admin') songQuery = songQuery.eq('owner_id', actor.id);
+      const { data: song, error } = await songQuery.maybeSingle();
 
       if (error) throw error;
       if (!song) throw new Error('Lagu tidak ditemukan atau akses ditolak.');
+      const isOwner = actor.role === 'super_admin';
+      const ownsSong = String(song.owner_id || '') === String(actor.id);
+      if (!isOwner && !ownsSong) {
+        throw new Error('Petugas hanya dapat mengunduh lagu miliknya sendiri.');
+      }
 
       const blob = await getAudioBlob(song);
       const url = URL.createObjectURL(blob);
@@ -123,7 +129,8 @@
     list.querySelectorAll('.song[data-id]').forEach((row) => {
       const actions = row.querySelector('.actions');
       const songId = row.getAttribute('data-id');
-      if (!actions || !songId || actions.querySelector('[data-admin-download]')) return;
+      const protectedSong = actions?.querySelector('.pill');
+      if (!actions || !songId || protectedSong || actions.querySelector('[data-admin-download]')) return;
 
       const button = document.createElement('button');
       button.type = 'button';
