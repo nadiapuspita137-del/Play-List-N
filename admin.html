@@ -7,7 +7,7 @@
     <link rel="icon" type="image/png" href="admin-favicon.png" />
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdn.jsdelivr.net/npm/tus-js-client@4/dist/tus.min.js"></script>
-    <script src="supabase-config.js?v=6"></script>
+    <script src="supabase-config.js?v=7"></script>
     <style>
       * {
         box-sizing: border-box;
@@ -1501,7 +1501,7 @@
           (data || [])
             .map(
               (x) =>
-                `<div class="admin-row"><span class="admin-avatar">♙</span><div><b>${esc(x.display_name || "Admin")}</b><div class="admin-email">${esc(x.email || "Email belum tersimpan")}</div><div class="muted">${songs.filter((s) => String(s.owner_id) === String(x.id)).length} lagu digunakan • Kuota ${x.song_quota} • ${x.is_active ? "Aktif" : "Nonaktif"}</div></div><div class="admin-actions"><a class="btn ghost" href="admin-detail.html?id=${encodeURIComponent(x.id)}">Kelola Admin →</a></div></div>`,
+                `<div class="admin-row"><span class="admin-avatar">♙</span><div><b>${esc(x.display_name || "Admin")}</b><div class="admin-email">${esc(x.email || "Email belum tersimpan")}</div><div class="muted">${songs.filter((s) => String(s.owner_id) === String(x.id)).length} lagu digunakan • Kuota ${x.song_quota} • ${x.is_active ? "Aktif" : "Nonaktif"}</div></div><div class="admin-actions"><button type="button" class="btn ghost" onclick="openAdminDetail('${x.id}')">Kelola Admin →</button></div></div>`,
             )
             .join("") || '<p class="muted">Belum ada admin tambahan.</p>';
       }

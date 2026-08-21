@@ -6,10 +6,11 @@ window.SUPABASE_CONFIG = {
 // Muat kontrol permission dan penyempurnaan panel admin.
 (() => {
   const scripts = [
-    'admin-permissions.js?v=6',
+    'admin-permissions.js?v=7',
     'admin-quota-fix.js',
     'admin-uploader.js',
-    'admin-download.js'
+    'admin-download.js',
+    'admin-nested-detail.js?v=7'
   ];
   scripts.forEach((src) => {
     const script = document.createElement('script');
