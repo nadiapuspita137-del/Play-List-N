@@ -98,6 +98,13 @@
     }
   };
 
+  document.addEventListener('click', event => {
+    const button = event.target.closest('[data-manage-admin]');
+    if (!button) return;
+    event.preventDefault();
+    window.openAdminDetail(button.dataset.manageAdmin);
+  });
+
   function render(profile, used) {
     const permissions = {...DEFAULTS,...(profile.permissions || {})};
     document.getElementById('nestedCrumbName').textContent = profile.display_name || 'Admin';
