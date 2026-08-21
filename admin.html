@@ -1581,10 +1581,15 @@
       $("statsRefresh").onclick = loadStats;
       $("statsSearch").addEventListener("input", renderStats);
       async function loadAdmins() {
-        const { data } = await db
+        const { data, error } = await db
           .from("profiles")
           .select("*")
           .eq("role", "editor");
+        if (error) {
+          $("adminList").innerHTML = '<p class="muted">Daftar admin gagal dimuat. Coba muat ulang.</p>';
+          console.error("Gagal memuat daftar admin:", error);
+          return false;
+        }
         $("adminList").innerHTML =
           (data || [])
             .map(
@@ -1592,7 +1597,9 @@
                 `<div class="admin-row"><span class="admin-avatar">♙</span><div><b>${esc(x.display_name || "Admin")}</b><div class="admin-email">${esc(x.email || "Email belum tersimpan")}</div><div class="muted">${songs.filter((s) => String(s.owner_id) === String(x.id)).length} lagu digunakan • Kuota ${x.song_quota} • ${x.is_active ? "Aktif" : "Nonaktif"}</div></div><div class="admin-actions"><button type="button" class="btn ghost" data-manage-admin="${x.id}">Kelola Admin →</button></div></div>`,
             )
             .join("") || '<p class="muted">Belum ada admin tambahan.</p>';
+        return true;
       }
+      window.loadAdmins = loadAdmins;
       $("adminForm").onsubmit = async (e) => {
         e.preventDefault();
         const { data, error } = await window.createAuthUserWithoutSession({
@@ -1974,6 +1981,6 @@
       }
       ensureAdmin();
     </script>
-    <script src="admin-nested-detail.js?v=12"></script>
+    <script src="admin-nested-detail.js?v=13"></script>
   </body>
 </html>

@@ -68,12 +68,13 @@
     window.scrollTo({top:0,behavior:'smooth'});
   }
 
-  function showAdminList() {
+  async function showAdminList() {
     selectedId = null;
     resetPasswordState();
     activate('admins');
     const label = document.getElementById('pageLabel');
     if (label) label.textContent = 'KELOLA ADMIN';
+    await refreshAdminList();
   }
 
   function message(text, bad=false) {
@@ -89,6 +90,16 @@
     if (!output) return;
     output.textContent = '';
     output.classList.add('hidden');
+  }
+
+  async function refreshAdminList() {
+    if (typeof window.loadAdmins !== 'function') return false;
+    try {
+      return (await window.loadAdmins()) !== false;
+    } catch (error) {
+      console.warn('Daftar admin gagal dimuat ulang:', error);
+      return false;
+    }
   }
 
   window.openAdminDetail = async id => {
@@ -162,7 +173,8 @@
     document.getElementById('nestedQuota').textContent = quota;
     document.getElementById('nestedAdminName').textContent = document.getElementById('nestedDisplayName').value.trim() || 'Admin';
     document.getElementById('nestedCrumbName').textContent = document.getElementById('nestedAdminName').textContent;
-    message('Perubahan admin berhasil disimpan.');
+    const refreshed = await refreshAdminList();
+    message(refreshed ? 'Perubahan admin berhasil disimpan.' : 'Perubahan tersimpan, tetapi daftar admin belum berhasil dimuat ulang.', !refreshed);
   }
 
   async function resetAdminPassword(event) {
