@@ -161,6 +161,12 @@
   }
 
   function prepareRow(row) {
+    const editors = [...row.querySelectorAll('.permission-row-editor')];
+    editors.slice(1).forEach(editor => {
+      const wrapper = editor.closest('.admin-access-wrap');
+      if (wrapper) wrapper.remove();
+      else editor.remove();
+    });
     if (row.dataset.masterDetail === '1') return;
     const info = row.querySelector(':scope > div:nth-child(2)');
     const actions = row.querySelector(':scope > .admin-actions');
