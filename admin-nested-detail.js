@@ -41,11 +41,13 @@
         <div class="detail-summary"><div class="detail-stat"><small>Status</small><b id="nestedStatus">—</b></div><div class="detail-stat"><small>Kuota Lagu</small><b id="nestedQuota">—</b></div><div class="detail-stat"><small>Lagu Digunakan</small><b id="nestedUsed">—</b></div></div>
         <section class="detail-section"><h3>Pengaturan Akun</h3><p class="muted">Ubah identitas, kuota, dan status akun admin.</p><div class="detail-fields"><label class="detail-field">Nama admin<input id="nestedDisplayName" required></label><label class="detail-field">Email<input id="nestedEmail" type="email" disabled></label><label class="detail-field">Kuota lagu<input id="nestedSongQuota" type="number" min="0" required></label><label class="detail-field">Status akun<select id="nestedIsActive"><option value="true">Aktif</option><option value="false">Nonaktif</option></select></label></div></section>
         <section class="detail-section"><h3>Hak Akses</h3><p class="muted">Pilih menu dan tindakan yang boleh digunakan admin ini.</p><div id="nestedPermissions" class="detail-permissions"></div></section>
+        <section class="detail-section"><h3>Atur Ulang Password</h3><p class="muted">Khusus Owner untuk menetapkan password baru admin ini.</p><div class="detail-fields"><label class="detail-field">Password baru<input id="ownerAdminPassword" type="password" minlength="8" autocomplete="new-password"></label><label class="detail-field">Konfirmasi password<input id="ownerAdminPasswordConfirm" type="password" minlength="8" autocomplete="new-password"></label></div><div id="ownerPasswordMessage" class="notice hidden" style="margin-top:12px"></div><div class="detail-footer"><button id="ownerResetPassword" type="button" class="btn danger">Ubah Password Admin</button></div></section>
         <div id="nestedMessage" class="notice hidden"></div><div class="detail-footer"><button type="button" class="btn ghost" data-admin-back>Batal</button><button id="nestedSave" class="btn primary" type="submit">Simpan Perubahan</button></div>
       </form>`;
     workspace.appendChild(view);
     view.querySelectorAll('[data-admin-back]').forEach(button => button.addEventListener('click', showAdminList));
     view.querySelector('#nestedAdminForm').addEventListener('submit', saveAdmin);
+    view.querySelector('#ownerResetPassword').addEventListener('click', resetAdminPassword);
     return view;
   }
 
@@ -137,6 +139,45 @@
     document.getElementById('nestedAdminName').textContent = document.getElementById('nestedDisplayName').value.trim() || 'Admin';
     document.getElementById('nestedCrumbName').textContent = document.getElementById('nestedAdminName').textContent;
     message('Perubahan admin berhasil disimpan.');
+  }
+
+  async function resetAdminPassword() {
+    if (!selectedId || !db) return;
+    const password = document.getElementById('ownerAdminPassword').value;
+    const confirmation = document.getElementById('ownerAdminPasswordConfirm').value;
+    const button = document.getElementById('ownerResetPassword');
+    const output = document.getElementById('ownerPasswordMessage');
+    output.classList.add('hidden');
+    if (password.length < 8) {
+      output.textContent = 'Password baru minimal terdiri dari 8 karakter.';
+      output.style.color = '#ff919b';
+      return output.classList.remove('hidden');
+    }
+    if (password !== confirmation) {
+      output.textContent = 'Konfirmasi password tidak sama.';
+      output.style.color = '#ff919b';
+      return output.classList.remove('hidden');
+    }
+    button.disabled = true;
+    const {error} = await db.functions.invoke('admin-reset-password', {
+      body: {target_user_id:selectedId,new_password:password},
+    });
+    button.disabled = false;
+    if (error) {
+      let detail = error.message || 'Password admin gagal diperbarui.';
+      try {
+        const response = await error.context?.json();
+        if (response?.error) detail = response.error;
+      } catch (_) {}
+      output.textContent = detail;
+      output.style.color = '#ff919b';
+      return output.classList.remove('hidden');
+    }
+    document.getElementById('ownerAdminPassword').value = '';
+    document.getElementById('ownerAdminPasswordConfirm').value = '';
+    output.textContent = 'Password admin berhasil diperbarui.';
+    output.style.color = '#8fffc5';
+    output.classList.remove('hidden');
   }
 
 })();
